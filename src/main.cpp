@@ -168,58 +168,128 @@ std::vector<Vertex> buildWorld()
                 glm::vec3 p(x, y, z);
                 glm::vec3 topColor = (y == h - 1) ? grass : dirt;
 
-                // Top
-                addFace(vertices,
-                        p + glm::vec3(0, 1, 0),
-                        p + glm::vec3(0, 1, 1),
-                        p + glm::vec3(1, 1, 1),
-                        p + glm::vec3(1, 1, 0),
-                        topColor);
+                // Top: only the highest block in this column has an exposed top.
+                if (y == h - 1)
+                {
+                    addFace(vertices,
+                            p + glm::vec3(0, 1, 0),
+                            p + glm::vec3(0, 1, 1),
+                            p + glm::vec3(1, 1, 1),
+                            p + glm::vec3(1, 1, 0),
+                            topColor);
+                }
 
-                // Bottom
-                addFace(vertices,
-                        p + glm::vec3(0, 0, 0),
-                        p + glm::vec3(1, 0, 0),
-                        p + glm::vec3(1, 0, 1),
-                        p + glm::vec3(0, 0, 1),
-                        dirt);
+                // Bottom: only the bottom layer touches the outside world.
+                if (y == 0)
+                {
+                    addFace(vertices,
+                            p + glm::vec3(0, 0, 0),
+                            p + glm::vec3(1, 0, 0),
+                            p + glm::vec3(1, 0, 1),
+                            p + glm::vec3(0, 0, 1),
+                            dirt);
+                }
 
-                // +X
-                addFace(vertices,
-                        p + glm::vec3(1, 0, 0),
-                        p + glm::vec3(1, 1, 0),
-                        p + glm::vec3(1, 1, 1),
-                        p + glm::vec3(1, 0, 1),
-                        stone);
+                // +X: draw only if the neighboring column doesn't cover this block.
+                if (x == WORLD_X - 1 || heights[x + 1][z] <= y)
+                {
+                    addFace(vertices,
+                            p + glm::vec3(1, 0, 0),
+                            p + glm::vec3(1, 1, 0),
+                            p + glm::vec3(1, 1, 1),
+                            p + glm::vec3(1, 0, 1),
+                            stone);
+                }
 
                 // -X
-                addFace(vertices,
-                        p + glm::vec3(0, 0, 0),
-                        p + glm::vec3(0, 0, 1),
-                        p + glm::vec3(0, 1, 1),
-                        p + glm::vec3(0, 1, 0),
-                        stone);
+                if (x == 0 || heights[x - 1][z] <= y)
+                {
+                    addFace(vertices,
+                            p + glm::vec3(0, 0, 0),
+                            p + glm::vec3(0, 0, 1),
+                            p + glm::vec3(0, 1, 1),
+                            p + glm::vec3(0, 1, 0),
+                            stone);
+                }
 
                 // +Z
-                addFace(vertices,
-                        p + glm::vec3(0, 0, 1),
-                        p + glm::vec3(1, 0, 1),
-                        p + glm::vec3(1, 1, 1),
-                        p + glm::vec3(0, 1, 1),
-                        stone);
+                if (z == WORLD_Z - 1 || heights[x][z + 1] <= y)
+                {
+                    addFace(vertices,
+                            p + glm::vec3(0, 0, 1),
+                            p + glm::vec3(1, 0, 1),
+                            p + glm::vec3(1, 1, 1),
+                            p + glm::vec3(0, 1, 1),
+                            stone);
+                }
 
                 // -Z
-                addFace(vertices,
-                        p + glm::vec3(0, 0, 0),
-                        p + glm::vec3(0, 1, 0),
-                        p + glm::vec3(1, 1, 0),
-                        p + glm::vec3(1, 0, 0),
-                        stone);
+                if (z == 0 || heights[x][z - 1] <= y)
+                {
+                    addFace(vertices,
+                            p + glm::vec3(0, 0, 0),
+                            p + glm::vec3(0, 1, 0),
+                            p + glm::vec3(1, 1, 0),
+                            p + glm::vec3(1, 0, 0),
+                            stone);
+                }
             }
         }
     }
 
     return vertices;
+}
+
+struct BlockTarget
+{
+    bool hit = false;
+    int x = 0;
+    int y = 0;
+    int z = 0;
+    glm::ivec3 previousBlock = glm::ivec3(0);
+};
+
+BlockTarget raycastBlocks(
+    const glm::vec3 &origin,
+    const glm::vec3 &direction,
+    const int heights[16][16])
+{
+    constexpr float MAX_REACH = 5.0f;
+    constexpr float STEP = 0.02f;
+
+    BlockTarget result;
+    glm::ivec3 previous(
+        static_cast<int>(std::floor(origin.x)),
+        static_cast<int>(std::floor(origin.y)),
+        static_cast<int>(std::floor(origin.z)));
+
+    for (float distance = 0.0f;
+         distance <= MAX_REACH;
+         distance += STEP)
+    {
+        glm::vec3 point = origin + direction * distance;
+
+        int x = static_cast<int>(std::floor(point.x));
+        int y = static_cast<int>(std::floor(point.y));
+        int z = static_cast<int>(std::floor(point.z));
+
+        if (x < 0 || x >= 16 || z < 0 || z >= 16)
+            continue;
+
+        if (y >= 0 && y < heights[x][z])
+        {
+            result.hit = true;
+            result.x = x;
+            result.y = y;
+            result.z = z;
+            result.previousBlock = previous;
+            return result;
+        }
+
+        previous = glm::ivec3(x, y, z);
+    }
+
+    return result;
 }
 
 int main()
@@ -322,6 +392,11 @@ int main()
         }
 
         player.processMovement(window, deltaTime, heights);
+
+        BlockTarget target = raycastBlocks(
+            player.getPosition(),
+            player.getFront(),
+            heights);
 
         // Camera and projection.
         int fbw, fbh;
