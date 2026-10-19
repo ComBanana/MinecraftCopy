@@ -55,6 +55,7 @@ find_package(OpenGL REQUIRED)
 
 add_executable(MinecraftCopy
     src/main.cpp
+    src/Player.cpp
 )
 
 target_link_libraries(MinecraftCopy

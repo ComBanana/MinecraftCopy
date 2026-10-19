@@ -10,34 +10,19 @@
 #include <iostream>
 #include <vector>
 
+#include "Player.h"
+
 const int WIDTH = 800;
 const int HEIGHT = 600;
 
 const int WORLD_X = 16;
 const int WORLD_Z = 16;
 
-const float PLAYER_HEIGHT = 1.8f;
-const float PLAYER_RADIUS = 0.3f;
-const float MOVE_SPEED = 5.0f;
-const float GRAVITY = 20.0f;
-const float JUMP_SPEED = 7.0f;
-
 int heights[WORLD_X][WORLD_Z];
-
-glm::vec3 cameraPos(8.0f, 3.8f, 8.0f);
-glm::vec3 cameraFront(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
-
-float yaw = -90.0f;
-float pitch = 0.0f;
-float lastX = WIDTH / 2.0f;
-float lastY = HEIGHT / 2.0f;
-bool firstMouse = true;
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
-float verticalVelocity = 0.0f;
-bool onGround = false;
+Player player;
 
 struct Vertex {
     glm::vec3 pos;
@@ -45,31 +30,7 @@ struct Vertex {
 };
 
 void mouse_callback(GLFWwindow*, double xpos, double ypos) {
-    if (firstMouse) {
-        lastX = static_cast<float>(xpos);
-        lastY = static_cast<float>(ypos);
-        firstMouse = false;
-    }
-
-    float xoffset = static_cast<float>(xpos) - lastX;
-    float yoffset = lastY - static_cast<float>(ypos);
-    lastX = static_cast<float>(xpos);
-    lastY = static_cast<float>(ypos);
-
-    const float sensitivity = 0.1f;
-    yaw += xoffset * sensitivity;
-    pitch += yoffset * sensitivity;
-
-    pitch = std::clamp(pitch, -89.0f, 89.0f);
-
-    glm::vec3 front;
-    front.x = std::cos(glm::radians(yaw)) *
-              std::cos(glm::radians(pitch));
-    front.y = std::sin(glm::radians(pitch));
-    front.z = std::sin(glm::radians(yaw)) *
-              std::cos(glm::radians(pitch));
-
-    cameraFront = glm::normalize(front);
+    player.processMouseMovement(xpos, ypos);
 }
 
 void framebuffer_callback(GLFWwindow*, int width, int height) {
@@ -241,117 +202,6 @@ std::vector<Vertex> buildWorld() {
     return vertices;
 }
 
-// Checks overlap between the player's body and one solid voxel.
-bool overlapsBlock(int x, int y, int z) {
-    float playerMinX = cameraPos.x - PLAYER_RADIUS;
-    float playerMaxX = cameraPos.x + PLAYER_RADIUS;
-    float playerMinY = cameraPos.y - PLAYER_HEIGHT;
-    float playerMaxY = cameraPos.y;
-    float playerMinZ = cameraPos.z - PLAYER_RADIUS;
-    float playerMaxZ = cameraPos.z + PLAYER_RADIUS;
-
-    return playerMaxX > x && playerMinX < x + 1 &&
-           playerMaxY > y && playerMinY < y + 1 &&
-           playerMaxZ > z && playerMinZ < z + 1;
-}
-
-void movePlayer(float dx, float dz) {
-    // Resolve X movement independently.
-    float oldX = cameraPos.x;
-    cameraPos.x += dx;
-
-    for (int x = 0; x < WORLD_X; ++x) {
-        for (int z = 0; z < WORLD_Z; ++z) {
-            for (int y = 0; y < heights[x][z]; ++y) {
-                if (overlapsBlock(x, y, z)) {
-                    if (dx > 0.0f)
-                        cameraPos.x = x - PLAYER_RADIUS;
-                    else if (dx < 0.0f)
-                        cameraPos.x = x + 1.0f + PLAYER_RADIUS;
-                }
-            }
-        }
-    }
-
-    // Resolve Z movement independently.
-    float oldZ = cameraPos.z;
-    cameraPos.z += dz;
-
-    for (int x = 0; x < WORLD_X; ++x) {
-        for (int z = 0; z < WORLD_Z; ++z) {
-            for (int y = 0; y < heights[x][z]; ++y) {
-                if (overlapsBlock(x, y, z)) {
-                    if (dz > 0.0f)
-                        cameraPos.z = z - PLAYER_RADIUS;
-                    else if (dz < 0.0f)
-                        cameraPos.z = z + 1.0f + PLAYER_RADIUS;
-                }
-            }
-        }
-    }
-
-    (void)oldX;
-    (void)oldZ;
-}
-
-void updateVertical(float dt) {
-    onGround = false;
-
-    float oldEyeY = cameraPos.y;
-    float oldFeetY = oldEyeY - PLAYER_HEIGHT;
-
-    verticalVelocity -= GRAVITY * dt;
-    cameraPos.y += verticalVelocity * dt;
-
-    for (int x = 0; x < WORLD_X; ++x) {
-        for (int z = 0; z < WORLD_Z; ++z) {
-            for (int y = 0; y < heights[x][z]; ++y) {
-                if (!overlapsBlock(x, y, z))
-                    continue;
-
-                float blockTop = static_cast<float>(y + 1);
-                float blockBottom = static_cast<float>(y);
-
-                if (verticalVelocity <= 0.0f &&
-                    oldFeetY >= blockTop - 0.001f) {
-                    // Land on the top of the block.
-                    cameraPos.y = blockTop + PLAYER_HEIGHT;
-                    verticalVelocity = 0.0f;
-                    onGround = true;
-                } else if (verticalVelocity > 0.0f &&
-                           oldEyeY <= blockBottom + 0.001f) {
-                    // Hit the underside of a block.
-                    cameraPos.y = blockBottom;
-                    verticalVelocity = 0.0f;
-                }
-            }
-        }
-    }
-
-    // A small downward probe keeps the grounded state stable.
-    if (!onGround && verticalVelocity <= 0.0f) {
-        float savedY = cameraPos.y;
-        cameraPos.y -= 0.03f;
-
-        for (int x = 0; x < WORLD_X && !onGround; ++x) {
-            for (int z = 0; z < WORLD_Z && !onGround; ++z) {
-                for (int y = 0; y < heights[x][z]; ++y) {
-                    if (overlapsBlock(x, y, z)) {
-                        cameraPos.y = static_cast<float>(y + 1) +
-                                      PLAYER_HEIGHT;
-                        verticalVelocity = 0.0f;
-                        onGround = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (!onGround)
-            cameraPos.y = savedY;
-    }
-}
-
 int main() {
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW\n";
@@ -396,10 +246,10 @@ int main() {
     std::vector<Vertex> vertices = buildWorld();
 
     // Spawn above the ground at the center of the world.
-    cameraPos = glm::vec3(
+    player.setPosition(glm::vec3(
         8.5f,
-        static_cast<float>(heights[8][8]) + PLAYER_HEIGHT,
-        8.5f);
+        static_cast<float>(heights[8][8]) + 1.8f,
+        8.5f));
 
     unsigned int shaderProgram = makeShaderProgram();
     if (!shaderProgram) {
@@ -432,8 +282,6 @@ int main() {
         reinterpret_cast<void*>(offsetof(Vertex, color)));
     glEnableVertexAttribArray(1);
 
-    bool spaceWasDown = false;
-
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = std::min(currentFrame - lastFrame, 0.05f);
@@ -445,46 +293,7 @@ int main() {
             glfwSetWindowShouldClose(window, true);
         }
 
-        // WASD movement relative to the direction the camera faces.
-        glm::vec3 forward(
-            cameraFront.x, 0.0f, cameraFront.z);
-
-        if (glm::length(forward) > 0.001f)
-            forward = glm::normalize(forward);
-
-        glm::vec3 right = glm::normalize(
-            glm::cross(forward, cameraUp));
-
-        glm::vec3 moveDirection(0.0f);
-
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            moveDirection += forward;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            moveDirection -= forward;
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            moveDirection += right;
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            moveDirection -= right;
-
-        if (glm::length(moveDirection) > 0.001f) {
-            moveDirection = glm::normalize(moveDirection);
-            movePlayer(
-                moveDirection.x * MOVE_SPEED * deltaTime,
-                moveDirection.z * MOVE_SPEED * deltaTime);
-        }
-
-        // Jump only on a fresh press while grounded.
-        bool spaceDown =
-            glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-
-        if (spaceDown && !spaceWasDown && onGround) {
-            verticalVelocity = JUMP_SPEED;
-            onGround = false;
-        }
-
-        spaceWasDown = spaceDown;
-
-        updateVertical(deltaTime);
+        player.processMovement(window, deltaTime, heights);
 
         // Camera and projection.
         int fbw, fbh;
@@ -505,7 +314,9 @@ int main() {
             0.1f, 100.0f);
 
         glm::mat4 view = glm::lookAt(
-            cameraPos, cameraPos + cameraFront, cameraUp);
+            player.getPosition(),
+            player.getPosition() + player.getFront(),
+            player.getUp());
 
         glm::mat4 MVP = projection * view;
 
