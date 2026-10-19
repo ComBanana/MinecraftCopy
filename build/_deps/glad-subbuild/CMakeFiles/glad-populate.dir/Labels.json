@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/glad-populate"
+		},
+		{
+			"file" : "C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/f41b8407058577f0d1e81c2c1b646757/glad-populate.rule"
+		},
+		{
+			"file" : "C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/6ff6ee73a0bcbef81a717706bae1e536/glad-populate-complete.rule"
+		},
+		{
+			"file" : "C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/6b170ff262a40d3d85f4df3678d80d3b/glad-populate-build.rule"
+		},
+		{
+			"file" : "C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/6b170ff262a40d3d85f4df3678d80d3b/glad-populate-configure.rule"
+		},
+		{
+			"file" : "C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/6b170ff262a40d3d85f4df3678d80d3b/glad-populate-download.rule"
+		},
+		{
+			"file" : "C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/6b170ff262a40d3d85f4df3678d80d3b/glad-populate-install.rule"
+		},
+		{
+			"file" : "C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/6b170ff262a40d3d85f4df3678d80d3b/glad-populate-mkdir.rule"
+		},
+		{
+			"file" : "C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/6b170ff262a40d3d85f4df3678d80d3b/glad-populate-patch.rule"
+		},
+		{
+			"file" : "C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/6b170ff262a40d3d85f4df3678d80d3b/glad-populate-test.rule"
+		},
+		{
+			"file" : "C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/6b170ff262a40d3d85f4df3678d80d3b/glad-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"glad-populate"
+		],
+		"name" : "glad-populate"
+	}
+}

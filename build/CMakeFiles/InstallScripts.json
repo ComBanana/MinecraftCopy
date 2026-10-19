@@ -1,0 +1,12 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/MinecraftCopy/build/cmake_install.cmake",
+		"C:/MinecraftCopy/build/_deps/glm-build/cmake_install.cmake",
+		"C:/MinecraftCopy/build/_deps/glm-build/glm/cmake_install.cmake",
+		"C:/MinecraftCopy/build/_deps/glfw-build/cmake_install.cmake",
+		"C:/MinecraftCopy/build/_deps/glfw-build/src/cmake_install.cmake",
+		"C:/MinecraftCopy/build/_deps/glad-build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

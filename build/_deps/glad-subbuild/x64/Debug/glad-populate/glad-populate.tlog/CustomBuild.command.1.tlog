@@ -1,0 +1,150 @@
+^C:\MINECRAFTCOPY\BUILD\_DEPS\GLAD-SUBBUILD\CMAKEFILES\6B170FF262A40D3D85F4DF3678D80D3B\GLAD-POPULATE-MKDIR.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P C:/MinecraftCopy/build/_deps/glad-subbuild/glad-populate-prefix/tmp/glad-populate-mkdirs.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/MinecraftCopy/build/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/Debug/glad-populate-mkdir
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\MINECRAFTCOPY\BUILD\_DEPS\GLAD-SUBBUILD\CMAKEFILES\6B170FF262A40D3D85F4DF3678D80D3B\GLAD-POPULATE-DOWNLOAD.RULE
+setlocal
+cd C:\MinecraftCopy\build\_deps
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P C:/MinecraftCopy/build/_deps/glad-subbuild/glad-populate-prefix/tmp/glad-populate-gitclone.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/MinecraftCopy/build/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/Debug/glad-populate-download
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\MINECRAFTCOPY\BUILD\_DEPS\GLAD-SUBBUILD\CMAKEFILES\6B170FF262A40D3D85F4DF3678D80D3B\GLAD-POPULATE-UPDATE.RULE
+setlocal
+cd C:\MinecraftCopy\build\_deps\glad-src
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -Dcan_fetch=YES -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P C:/MinecraftCopy/build/_deps/glad-subbuild/glad-populate-prefix/tmp/glad-populate-gitupdate.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\MINECRAFTCOPY\BUILD\_DEPS\GLAD-SUBBUILD\CMAKEFILES\6B170FF262A40D3D85F4DF3678D80D3B\GLAD-POPULATE-PATCH.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/MinecraftCopy/build/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/Debug/glad-populate-patch
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\MINECRAFTCOPY\BUILD\_DEPS\GLAD-SUBBUILD\CMAKEFILES\6B170FF262A40D3D85F4DF3678D80D3B\GLAD-POPULATE-CONFIGURE.RULE
+setlocal
+cd C:\MinecraftCopy\build\_deps\glad-build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/MinecraftCopy/build/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/Debug/glad-populate-configure
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\MINECRAFTCOPY\BUILD\_DEPS\GLAD-SUBBUILD\CMAKEFILES\6B170FF262A40D3D85F4DF3678D80D3B\GLAD-POPULATE-BUILD.RULE
+setlocal
+cd C:\MinecraftCopy\build\_deps\glad-build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/MinecraftCopy/build/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/Debug/glad-populate-build
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\MINECRAFTCOPY\BUILD\_DEPS\GLAD-SUBBUILD\CMAKEFILES\6B170FF262A40D3D85F4DF3678D80D3B\GLAD-POPULATE-INSTALL.RULE
+setlocal
+cd C:\MinecraftCopy\build\_deps\glad-build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/MinecraftCopy/build/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/Debug/glad-populate-install
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\MINECRAFTCOPY\BUILD\_DEPS\GLAD-SUBBUILD\CMAKEFILES\6B170FF262A40D3D85F4DF3678D80D3B\GLAD-POPULATE-TEST.RULE
+setlocal
+cd C:\MinecraftCopy\build\_deps\glad-build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/MinecraftCopy/build/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/Debug/glad-populate-test
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\MINECRAFTCOPY\BUILD\_DEPS\GLAD-SUBBUILD\CMAKEFILES\6FF6EE73A0BCBEF81A717706BAE1E536\GLAD-POPULATE-COMPLETE.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/Debug
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/Debug/glad-populate-complete
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/MinecraftCopy/build/_deps/glad-subbuild/glad-populate-prefix/src/glad-populate-stamp/Debug/glad-populate-done
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\MINECRAFTCOPY\BUILD\_DEPS\GLAD-SUBBUILD\CMAKEFILES\F41B8407058577F0D1E81C2C1B646757\GLAD-POPULATE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\MINECRAFTCOPY\BUILD\_DEPS\GLAD-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/MinecraftCopy/build/_deps/glad-subbuild -BC:/MinecraftCopy/build/_deps/glad-subbuild --check-stamp-file C:/MinecraftCopy/build/_deps/glad-subbuild/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

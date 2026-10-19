@@ -1,0 +1,14 @@
+# Target labels
+ glfw-populate
+# Source files and their labels
+C:/MinecraftCopy/build/_deps/glfw-subbuild/CMakeFiles/glfw-populate
+C:/MinecraftCopy/build/_deps/glfw-subbuild/CMakeFiles/1831bb0c28fc3ee58be560c3d927807b/glfw-populate.rule
+C:/MinecraftCopy/build/_deps/glfw-subbuild/CMakeFiles/dfedefeb41b2e338c106f3af1df90081/glfw-populate-complete.rule
+C:/MinecraftCopy/build/_deps/glfw-subbuild/CMakeFiles/1d72f96c0b755e8774f0047c1b75b6c8/glfw-populate-build.rule
+C:/MinecraftCopy/build/_deps/glfw-subbuild/CMakeFiles/1d72f96c0b755e8774f0047c1b75b6c8/glfw-populate-configure.rule
+C:/MinecraftCopy/build/_deps/glfw-subbuild/CMakeFiles/1d72f96c0b755e8774f0047c1b75b6c8/glfw-populate-download.rule
+C:/MinecraftCopy/build/_deps/glfw-subbuild/CMakeFiles/1d72f96c0b755e8774f0047c1b75b6c8/glfw-populate-install.rule
+C:/MinecraftCopy/build/_deps/glfw-subbuild/CMakeFiles/1d72f96c0b755e8774f0047c1b75b6c8/glfw-populate-mkdir.rule
+C:/MinecraftCopy/build/_deps/glfw-subbuild/CMakeFiles/1d72f96c0b755e8774f0047c1b75b6c8/glfw-populate-patch.rule
+C:/MinecraftCopy/build/_deps/glfw-subbuild/CMakeFiles/1d72f96c0b755e8774f0047c1b75b6c8/glfw-populate-test.rule
+C:/MinecraftCopy/build/_deps/glfw-subbuild/CMakeFiles/1d72f96c0b755e8774f0047c1b75b6c8/glfw-populate-update.rule

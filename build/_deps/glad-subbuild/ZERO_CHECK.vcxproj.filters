@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\MinecraftCopy\build\_deps\glad-subbuild\CMakeFiles\f41b8407058577f0d1e81c2c1b646757\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{9DCB284E-E560-39E7-8447-D1AAA9274BB2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
