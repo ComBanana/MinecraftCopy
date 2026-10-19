@@ -292,6 +292,32 @@ BlockTarget raycastBlocks(
     return result;
 }
 
+void addTargetOutline(std::vector<Vertex> &vertices,
+                      const BlockTarget &target)
+{
+    if (!target.hit)
+        return;
+
+    const float e = 0.003f;
+    float x = static_cast<float>(target.x);
+    float y = static_cast<float>(target.y);
+    float z = static_cast<float>(target.z);
+
+    glm::vec3 p[8] = {
+        {x - e, y - e, z - e}, {x + 1 + e, y - e, z - e}, {x + 1 + e, y + 1 + e, z - e}, {x - e, y + 1 + e, z - e}, {x - e, y - e, z + 1 + e}, {x + 1 + e, y - e, z + 1 + e}, {x + 1 + e, y + 1 + e, z + 1 + e}, {x - e, y + 1 + e, z + 1 + e}};
+
+    const int edges[12][2] = {
+        {0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
+
+    glm::vec3 color(0.05f, 0.05f, 0.05f);
+
+    for (const auto &edge : edges)
+    {
+        vertices.push_back({p[edge[0]], color});
+        vertices.push_back({p[edge[1]], color});
+    }
+}
+
 int main()
 {
     if (!glfwInit())
@@ -378,6 +404,32 @@ int main()
         reinterpret_cast<void *>(offsetof(Vertex, color)));
     glEnableVertexAttribArray(1);
 
+    // Buffers for the block-selection outline.
+    unsigned int outlineVAO = 0;
+    unsigned int outlineVBO = 0;
+
+    glGenVertexArrays(1, &outlineVAO);
+    glGenBuffers(1, &outlineVBO);
+
+    glBindVertexArray(outlineVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, outlineVBO);
+
+    glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(Vertex),
+                 nullptr, GL_DYNAMIC_DRAW);
+
+    glVertexAttribPointer(
+        0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+        reinterpret_cast<void *>(offsetof(Vertex, pos)));
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(
+        1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+        reinterpret_cast<void *>(offsetof(Vertex, color)));
+    glEnableVertexAttribArray(1);
+
+    // Restore the terrain VAO.
+    glBindVertexArray(VAO);
+
     while (!glfwWindowShouldClose(window))
     {
         float currentFrame = static_cast<float>(glfwGetTime());
@@ -433,6 +485,29 @@ int main()
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0,
                      static_cast<GLsizei>(vertices.size()));
+
+        if (target.hit)
+        {
+            std::vector<Vertex> outlineVertices;
+            outlineVertices.reserve(24);
+            addTargetOutline(outlineVertices, target);
+
+            glBindVertexArray(outlineVAO);
+            glBindBuffer(GL_ARRAY_BUFFER, outlineVBO);
+
+            glBufferData(
+                GL_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(
+                    outlineVertices.size() * sizeof(Vertex)),
+                outlineVertices.data(),
+                GL_DYNAMIC_DRAW);
+
+            glLineWidth(2.0f);
+            glDrawArrays(GL_LINES, 0,
+                         static_cast<GLsizei>(outlineVertices.size()));
+
+            glBindVertexArray(VAO);
+        }
 
         // Draw a white crosshair in the center of the screen.
         glEnable(GL_SCISSOR_TEST);
