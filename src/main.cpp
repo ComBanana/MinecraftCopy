@@ -477,6 +477,44 @@ int main()
 
         leftMouseWasDown = leftMouseDown;
 
+        bool rightMouseWasDown = false;
+        bool rightMouseDown =
+            glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+
+        if (rightMouseDown && !rightMouseWasDown && target.hit)
+        {
+            glm::ivec3 place = target.previousBlock;
+
+            if (place.x >= 0 && place.x < WORLD_X &&
+                place.z >= 0 && place.z < WORLD_Z &&
+                place.y >= 0 &&
+                place.y == heights[place.x][place.z])
+            {
+                glm::vec3 p = player.getPosition();
+
+                bool overlaps =
+                    p.x + 0.3f > place.x && p.x - 0.3f < place.x + 1 &&
+                    p.y > place.y && p.y - 1.8f < place.y + 1 &&
+                    p.z + 0.3f > place.z && p.z - 0.3f < place.z + 1;
+
+                if (!overlaps)
+                {
+                    heights[place.x][place.z]++;
+                    vertices = buildWorld();
+
+                    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                    glBufferData(
+                        GL_ARRAY_BUFFER,
+                        static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)),
+                        vertices.data(),
+                        GL_DYNAMIC_DRAW);
+                    glBindVertexArray(VAO);
+                }
+            }
+        }
+
+        rightMouseWasDown = rightMouseDown;
+
         // Camera and projection.
         int fbw, fbh;
         glfwGetFramebufferSize(window, &fbw, &fbh);
