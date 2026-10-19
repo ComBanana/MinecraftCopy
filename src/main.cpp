@@ -144,15 +144,6 @@ std::vector<Vertex> buildWorld()
 {
     std::vector<Vertex> vertices;
 
-    for (int x = 0; x < WORLD_X; ++x)
-    {
-        for (int z = 0; z < WORLD_Z; ++z)
-        {
-            // Simple rolling terrain.
-            heights[x][z] = 1 + (x + z) % 3;
-        }
-    }
-
     const glm::vec3 grass(0.15f, 0.72f, 0.16f);
     const glm::vec3 dirt(0.48f, 0.30f, 0.17f);
     const glm::vec3 stone(0.48f, 0.49f, 0.51f);
@@ -363,7 +354,15 @@ int main()
 
     glEnable(GL_DEPTH_TEST);
 
-    // Build the world before positioning the player.
+    // Generate the initial terrain only once.
+    for (int x = 0; x < WORLD_X; ++x)
+    {
+        for (int z = 0; z < WORLD_Z; ++z)
+        {
+            heights[x][z] = 1 + (x + z) % 3;
+        }
+    }
+
     std::vector<Vertex> vertices = buildWorld();
 
     // Spawn above the ground at the center of the world.
@@ -430,6 +429,7 @@ int main()
     // Restore the terrain VAO.
     glBindVertexArray(VAO);
 
+    bool leftMouseWasDown = false;
     while (!glfwWindowShouldClose(window))
     {
         float currentFrame = static_cast<float>(glfwGetTime());
@@ -449,6 +449,33 @@ int main()
             player.getPosition(),
             player.getFront(),
             heights);
+
+        // Break the targeted top block on a fresh left-click.
+        bool leftMouseDown =
+            glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+
+        if (leftMouseDown && !leftMouseWasDown && target.hit)
+        {
+            if (target.y == heights[target.x][target.z] - 1)
+            {
+                heights[target.x][target.z]--;
+
+                // Rebuild the terrain mesh after removing the block.
+                vertices = buildWorld();
+
+                glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                glBufferData(
+                    GL_ARRAY_BUFFER,
+                    static_cast<GLsizeiptr>(
+                        vertices.size() * sizeof(Vertex)),
+                    vertices.data(),
+                    GL_DYNAMIC_DRAW);
+
+                glBindVertexArray(VAO);
+            }
+        }
+
+        leftMouseWasDown = leftMouseDown;
 
         // Camera and projection.
         int fbw, fbh;
