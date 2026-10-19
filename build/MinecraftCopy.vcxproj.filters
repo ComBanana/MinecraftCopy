@@ -4,6 +4,9 @@
     <ClCompile Include="C:\MinecraftCopy\src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\MinecraftCopy\src\Player.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="C:\MinecraftCopy\CMakeLists.txt" />

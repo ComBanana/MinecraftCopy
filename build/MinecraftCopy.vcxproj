@@ -369,6 +369,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="C:\MinecraftCopy\src\main.cpp" />
+    <ClCompile Include="C:\MinecraftCopy\src\Player.cpp" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

@@ -2490,3 +2490,81 @@ events:
         - "C:/Program Files/CMake"
         - "C:/Program Files/MinecraftCopy"
 ...
+
+---
+events:
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/FindPython/Support.cmake:2585 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.4/Modules/FindPython.cmake:734 (include)"
+      - "build/_deps/glad-src/cmake/GladConfig.cmake:181 (find_package)"
+      - "CMakeLists.txt:48 (glad_add_library)"
+    mode: "program"
+    variable: "_Python_EXECUTABLE_DEBUG"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "python3.15_d"
+      - "python3_d"
+      - "python_d"
+    candidate_directories:
+      - "C:/Users/Jon Rempis/AppData/Local/Python/pythoncore-3.15-64/"
+    searched_directories:
+      - "C:/Users/Jon Rempis/AppData/Local/Python/pythoncore-3.15-64/python3.15_d.com"
+      - "C:/Users/Jon Rempis/AppData/Local/Python/pythoncore-3.15-64/python3.15_d.exe"
+      - "C:/Users/Jon Rempis/AppData/Local/Python/pythoncore-3.15-64/python3.15_d"
+      - "C:/Users/Jon Rempis/AppData/Local/Python/pythoncore-3.15-64/python3_d.com"
+      - "C:/Users/Jon Rempis/AppData/Local/Python/pythoncore-3.15-64/python3_d.exe"
+      - "C:/Users/Jon Rempis/AppData/Local/Python/pythoncore-3.15-64/python3_d"
+      - "C:/Users/Jon Rempis/AppData/Local/Python/pythoncore-3.15-64/python_d.com"
+      - "C:/Users/Jon Rempis/AppData/Local/Python/pythoncore-3.15-64/python_d.exe"
+      - "C:/Users/Jon Rempis/AppData/Local/Python/pythoncore-3.15-64/python_d"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "c:\\Users\\Jon Rempis\\AppData\\Roaming\\Code\\User\\globalStorage\\github.copilot-chat\\debugCommand"
+        - "c:\\Users\\Jon Rempis\\AppData\\Roaming\\Code\\User\\globalStorage\\github.copilot-chat\\copilotCli"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path"
+        - "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\javapath"
+        - "C:\\Program Files\\Microsoft\\jdk-25.0.3.9-hotspot\\bin"
+        - "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9\\bin"
+        - "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9\\libnvvp"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Program Files\\HP\\OMEN-Broadcast\\Common"
+        - "C:\\Program Files\\Microsoft SQL Server\\170\\Tools\\Binn\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files\\NVIDIA Corporation\\Nsight Compute 2025.2.1\\"
+        - "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.9\\bin"
+        - "C:\\Program Files\\NVIDIA\\CUDNN\\v9.23\\bin\\12.9\\x64"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files\\Git\\cmd"
+        - "%JAVA_HOME\\bin"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Users\\Jon Rempis\\scoop\\shims"
+        - "C:\\Users\\Jon Rempis\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\Jon Rempis\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\Jon Rempis\\AppData\\Roaming\\npm"
+        - "C:\\Users\\Jon Rempis\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Users\\Jon Rempis\\AppData\\Local\\Microsoft\\WinGet\\Links"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files/MinecraftCopy"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "C:/Program Files"
+        - "C:/Program Files (x86)"
+        - "C:/Program Files/CMake"
+        - "C:/Program Files/MinecraftCopy"
+...
