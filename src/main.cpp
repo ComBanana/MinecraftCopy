@@ -24,23 +24,28 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 Player player;
 
-struct Vertex {
+struct Vertex
+{
     glm::vec3 pos;
     glm::vec3 color;
 };
 
-void mouse_callback(GLFWwindow*, double xpos, double ypos) {
+void mouse_callback(GLFWwindow *, double xpos, double ypos)
+{
     player.processMouseMovement(xpos, ypos);
 }
 
-void framebuffer_callback(GLFWwindow*, int width, int height) {
-    if (height > 0 && width > 0) {
+void framebuffer_callback(GLFWwindow *, int width, int height)
+{
+    if (height > 0 && width > 0)
+    {
         glViewport(0, 0, width, height);
     }
 }
 
-unsigned int makeShaderProgram() {
-    const char* vertexSource = R"(
+unsigned int makeShaderProgram()
+{
+    const char *vertexSource = R"(
         #version 330 core
         layout(location = 0) in vec3 aPos;
         layout(location = 1) in vec3 aColor;
@@ -54,7 +59,7 @@ unsigned int makeShaderProgram() {
         }
     )";
 
-    const char* fragmentSource = R"(
+    const char *fragmentSource = R"(
         #version 330 core
         in vec3 vColor;
         out vec4 fragColor;
@@ -64,7 +69,8 @@ unsigned int makeShaderProgram() {
         }
     )";
 
-    auto compileShader = [](unsigned int type, const char* source) {
+    auto compileShader = [](unsigned int type, const char *source)
+    {
         unsigned int shader = glCreateShader(type);
         glShaderSource(shader, 1, &source, nullptr);
         glCompileShader(shader);
@@ -72,10 +78,12 @@ unsigned int makeShaderProgram() {
         int success = 0;
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 
-        if (!success) {
+        if (!success)
+        {
             char log[1024];
             glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
-            std::cerr << "Shader compilation failed:\n" << log << '\n';
+            std::cerr << "Shader compilation failed:\n"
+                      << log << '\n';
             glDeleteShader(shader);
             return 0u;
         }
@@ -86,9 +94,12 @@ unsigned int makeShaderProgram() {
     unsigned int vs = compileShader(GL_VERTEX_SHADER, vertexSource);
     unsigned int fs = compileShader(GL_FRAGMENT_SHADER, fragmentSource);
 
-    if (!vs || !fs) {
-        if (vs) glDeleteShader(vs);
-        if (fs) glDeleteShader(fs);
+    if (!vs || !fs)
+    {
+        if (vs)
+            glDeleteShader(vs);
+        if (fs)
+            glDeleteShader(fs);
         return 0;
     }
 
@@ -103,10 +114,12 @@ unsigned int makeShaderProgram() {
     int success = 0;
     glGetProgramiv(program, GL_LINK_STATUS, &success);
 
-    if (!success) {
+    if (!success)
+    {
         char log[1024];
         glGetProgramInfoLog(program, sizeof(log), nullptr, log);
-        std::cerr << "Shader linking failed:\n" << log << '\n';
+        std::cerr << "Shader linking failed:\n"
+                  << log << '\n';
         glDeleteProgram(program);
         return 0;
     }
@@ -114,9 +127,10 @@ unsigned int makeShaderProgram() {
     return program;
 }
 
-void addFace(std::vector<Vertex>& vertices,
+void addFace(std::vector<Vertex> &vertices,
              glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d,
-             glm::vec3 color) {
+             glm::vec3 color)
+{
     vertices.push_back({a, color});
     vertices.push_back({b, color});
     vertices.push_back({c, color});
@@ -126,11 +140,14 @@ void addFace(std::vector<Vertex>& vertices,
     vertices.push_back({d, color});
 }
 
-std::vector<Vertex> buildWorld() {
+std::vector<Vertex> buildWorld()
+{
     std::vector<Vertex> vertices;
 
-    for (int x = 0; x < WORLD_X; ++x) {
-        for (int z = 0; z < WORLD_Z; ++z) {
+    for (int x = 0; x < WORLD_X; ++x)
+    {
+        for (int z = 0; z < WORLD_Z; ++z)
+        {
             // Simple rolling terrain.
             heights[x][z] = 1 + (x + z) % 3;
         }
@@ -140,61 +157,64 @@ std::vector<Vertex> buildWorld() {
     const glm::vec3 dirt(0.48f, 0.30f, 0.17f);
     const glm::vec3 stone(0.48f, 0.49f, 0.51f);
 
-    for (int x = 0; x < WORLD_X; ++x) {
-        for (int z = 0; z < WORLD_Z; ++z) {
+    for (int x = 0; x < WORLD_X; ++x)
+    {
+        for (int z = 0; z < WORLD_Z; ++z)
+        {
             int h = heights[x][z];
 
-            for (int y = 0; y < h; ++y) {
+            for (int y = 0; y < h; ++y)
+            {
                 glm::vec3 p(x, y, z);
                 glm::vec3 topColor = (y == h - 1) ? grass : dirt;
 
                 // Top
                 addFace(vertices,
-                    p + glm::vec3(0, 1, 0),
-                    p + glm::vec3(0, 1, 1),
-                    p + glm::vec3(1, 1, 1),
-                    p + glm::vec3(1, 1, 0),
-                    topColor);
+                        p + glm::vec3(0, 1, 0),
+                        p + glm::vec3(0, 1, 1),
+                        p + glm::vec3(1, 1, 1),
+                        p + glm::vec3(1, 1, 0),
+                        topColor);
 
                 // Bottom
                 addFace(vertices,
-                    p + glm::vec3(0, 0, 0),
-                    p + glm::vec3(1, 0, 0),
-                    p + glm::vec3(1, 0, 1),
-                    p + glm::vec3(0, 0, 1),
-                    dirt);
+                        p + glm::vec3(0, 0, 0),
+                        p + glm::vec3(1, 0, 0),
+                        p + glm::vec3(1, 0, 1),
+                        p + glm::vec3(0, 0, 1),
+                        dirt);
 
                 // +X
                 addFace(vertices,
-                    p + glm::vec3(1, 0, 0),
-                    p + glm::vec3(1, 1, 0),
-                    p + glm::vec3(1, 1, 1),
-                    p + glm::vec3(1, 0, 1),
-                    stone);
+                        p + glm::vec3(1, 0, 0),
+                        p + glm::vec3(1, 1, 0),
+                        p + glm::vec3(1, 1, 1),
+                        p + glm::vec3(1, 0, 1),
+                        stone);
 
                 // -X
                 addFace(vertices,
-                    p + glm::vec3(0, 0, 0),
-                    p + glm::vec3(0, 0, 1),
-                    p + glm::vec3(0, 1, 1),
-                    p + glm::vec3(0, 1, 0),
-                    stone);
+                        p + glm::vec3(0, 0, 0),
+                        p + glm::vec3(0, 0, 1),
+                        p + glm::vec3(0, 1, 1),
+                        p + glm::vec3(0, 1, 0),
+                        stone);
 
                 // +Z
                 addFace(vertices,
-                    p + glm::vec3(0, 0, 1),
-                    p + glm::vec3(1, 0, 1),
-                    p + glm::vec3(1, 1, 1),
-                    p + glm::vec3(0, 1, 1),
-                    stone);
+                        p + glm::vec3(0, 0, 1),
+                        p + glm::vec3(1, 0, 1),
+                        p + glm::vec3(1, 1, 1),
+                        p + glm::vec3(0, 1, 1),
+                        stone);
 
                 // -Z
                 addFace(vertices,
-                    p + glm::vec3(0, 0, 0),
-                    p + glm::vec3(0, 1, 0),
-                    p + glm::vec3(1, 1, 0),
-                    p + glm::vec3(1, 0, 0),
-                    stone);
+                        p + glm::vec3(0, 0, 0),
+                        p + glm::vec3(0, 1, 0),
+                        p + glm::vec3(1, 1, 0),
+                        p + glm::vec3(1, 0, 0),
+                        stone);
             }
         }
     }
@@ -202,8 +222,10 @@ std::vector<Vertex> buildWorld() {
     return vertices;
 }
 
-int main() {
-    if (!glfwInit()) {
+int main()
+{
+    if (!glfwInit())
+    {
         std::cerr << "Failed to initialize GLFW\n";
         return -1;
     }
@@ -212,10 +234,11 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(
+    GLFWwindow *window = glfwCreateWindow(
         WIDTH, HEIGHT, "MinecraftCopy", nullptr, nullptr);
 
-    if (!window) {
+    if (!window)
+    {
         std::cerr << "Failed to create GLFW window\n";
         glfwTerminate();
         return -1;
@@ -228,12 +251,14 @@ int main() {
     glfwSetFramebufferSizeCallback(window, framebuffer_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    if (glfwRawMouseMotionSupported()) {
+    if (glfwRawMouseMotionSupported())
+    {
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
     }
 
     // Correct initialization for GLAD 2.
-    if (!gladLoadGL(reinterpret_cast<GLADloadfunc>(glfwGetProcAddress))) {
+    if (!gladLoadGL(reinterpret_cast<GLADloadfunc>(glfwGetProcAddress)))
+    {
         std::cerr << "Failed to initialize GLAD\n";
         glfwDestroyWindow(window);
         glfwTerminate();
@@ -252,7 +277,8 @@ int main() {
         8.5f));
 
     unsigned int shaderProgram = makeShaderProgram();
-    if (!shaderProgram) {
+    if (!shaderProgram)
+    {
         glfwDestroyWindow(window);
         glfwTerminate();
         return -1;
@@ -274,22 +300,24 @@ int main() {
 
     glVertexAttribPointer(
         0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-        reinterpret_cast<void*>(offsetof(Vertex, pos)));
+        reinterpret_cast<void *>(offsetof(Vertex, pos)));
     glEnableVertexAttribArray(0);
 
     glVertexAttribPointer(
         1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-        reinterpret_cast<void*>(offsetof(Vertex, color)));
+        reinterpret_cast<void *>(offsetof(Vertex, color)));
     glEnableVertexAttribArray(1);
 
-    while (!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(window))
+    {
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = std::min(currentFrame - lastFrame, 0.05f);
         lastFrame = currentFrame;
 
         glfwPollEvents();
 
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        {
             glfwSetWindowShouldClose(window, true);
         }
 
@@ -299,7 +327,8 @@ int main() {
         int fbw, fbh;
         glfwGetFramebufferSize(window, &fbw, &fbh);
 
-        if (fbh == 0) {
+        if (fbh == 0)
+        {
             glfwPollEvents();
             continue;
         }
@@ -329,6 +358,23 @@ int main() {
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0,
                      static_cast<GLsizei>(vertices.size()));
+
+        // Draw a white crosshair in the center of the screen.
+        glEnable(GL_SCISSOR_TEST);
+        glDisable(GL_DEPTH_TEST);
+
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+        // Horizontal bar
+        glScissor(fbw / 2 - 8, fbh / 2 - 1, 17, 3);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        // Vertical bar
+        glScissor(fbw / 2 - 1, fbh / 2 - 8, 3, 17);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glDisable(GL_SCISSOR_TEST);
+        glEnable(GL_DEPTH_TEST);
 
         glfwSwapBuffers(window);
     }

@@ -85,39 +85,57 @@ bool Player::overlapsBlock(
            maxZ > z && minZ < z + 1;
 }
 
+
 void Player::moveHorizontal(
     float dx, float dz, const int heights[16][16]) {
 
+    // Resolve X movement first, stopping at the nearest block.
+    const float oldX = position.x;
     position.x += dx;
+    float resolvedX = position.x;
 
     for (int x = 0; x < WORLD_X; ++x) {
         for (int z = 0; z < WORLD_Z; ++z) {
             for (int y = 0; y < heights[x][z]; ++y) {
-                if (overlapsBlock(x, y, z, heights)) {
-                    if (dx > 0.0f)
-                        position.x = x - PLAYER_RADIUS;
-                    else if (dx < 0.0f)
-                        position.x = x + 1.0f + PLAYER_RADIUS;
-                }
+                if (!overlapsBlock(x, y, z, heights))
+                    continue;
+
+                if (dx > 0.0f)
+                    resolvedX = std::min(
+                        resolvedX, x - PLAYER_RADIUS);
+                else if (dx < 0.0f)
+                    resolvedX = std::max(
+                        resolvedX, x + 1.0f + PLAYER_RADIUS);
             }
         }
     }
 
+    position.x = (dx == 0.0f) ? oldX : resolvedX;
+
+    // Resolve Z movement using the corrected X position.
+    const float oldZ = position.z;
     position.z += dz;
+    float resolvedZ = position.z;
 
     for (int x = 0; x < WORLD_X; ++x) {
         for (int z = 0; z < WORLD_Z; ++z) {
             for (int y = 0; y < heights[x][z]; ++y) {
-                if (overlapsBlock(x, y, z, heights)) {
-                    if (dz > 0.0f)
-                        position.z = z - PLAYER_RADIUS;
-                    else if (dz < 0.0f)
-                        position.z = z + 1.0f + PLAYER_RADIUS;
-                }
+                if (!overlapsBlock(x, y, z, heights))
+                    continue;
+
+                if (dz > 0.0f)
+                    resolvedZ = std::min(
+                        resolvedZ, z - PLAYER_RADIUS);
+                else if (dz < 0.0f)
+                    resolvedZ = std::max(
+                        resolvedZ, z + 1.0f + PLAYER_RADIUS);
             }
         }
     }
+
+    position.z = (dz == 0.0f) ? oldZ : resolvedZ;
 }
+
 
 void Player::updateVertical(
     float dt, const int heights[16][16]) {
