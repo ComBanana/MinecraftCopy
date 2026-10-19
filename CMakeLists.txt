@@ -25,6 +25,15 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG master
+    GIT_SHALLOW TRUE
+)
+
+FetchContent_MakeAvailable(stb)
+
+FetchContent_Declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
     GIT_TAG 3.5.1
@@ -65,6 +74,13 @@ target_link_libraries(MinecraftCopy
         OpenGL::GL
         glm::glm
 )
+
+target_include_directories(MinecraftCopy PRIVATE
+    ${stb_SOURCE_DIR}
+)
+
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+     DESTINATION "${CMAKE_BINARY_DIR}")
 
 if(MSVC)
     target_compile_options(MinecraftCopy PRIVATE /W4)

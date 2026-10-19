@@ -1,4 +1,5 @@
-
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
@@ -28,6 +29,7 @@ struct Vertex
 {
     glm::vec3 pos;
     glm::vec3 color;
+    glm::vec2 uv;
 };
 
 void mouse_callback(GLFWwindow *, double xpos, double ypos)
@@ -46,28 +48,43 @@ void framebuffer_callback(GLFWwindow *, int width, int height)
 unsigned int makeShaderProgram()
 {
     const char *vertexSource = R"(
-        #version 330 core
-        layout(location = 0) in vec3 aPos;
-        layout(location = 1) in vec3 aColor;
+    #version 330 core
+    layout(location = 0) in vec3 aPos;
+    layout(location = 1) in vec3 aColor;
+    layout(location = 2) in vec2 aUV;
 
-        uniform mat4 MVP;
-        out vec3 vColor;
+    uniform mat4 MVP;
 
-        void main() {
-            vColor = aColor;
-            gl_Position = MVP * vec4(aPos, 1.0);
-        }
-    )";
+    out vec3 vColor;
+    out vec2 vUV;
+
+    void main()
+    {
+        vColor = aColor;
+        vUV = aUV;
+        gl_Position = MVP * vec4(aPos, 1.0);
+    }
+)";
 
     const char *fragmentSource = R"(
-        #version 330 core
-        in vec3 vColor;
-        out vec4 fragColor;
+    #version 330 core
 
-        void main() {
+    in vec3 vColor;
+    in vec2 vUV;
+
+    uniform sampler2D textureAtlas;
+    uniform bool useTexture;
+
+    out vec4 fragColor;
+
+    void main()
+    {
+        if (useTexture)
+            fragColor = texture(textureAtlas, vUV) * vec4(vColor, 1.0);
+        else
             fragColor = vec4(vColor, 1.0);
-        }
-    )";
+    }
+)";
 
     auto compileShader = [](unsigned int type, const char *source)
     {
@@ -128,25 +145,40 @@ unsigned int makeShaderProgram()
 }
 
 void addFace(std::vector<Vertex> &vertices,
-             glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d,
-             glm::vec3 color)
+             glm::vec3 a, glm::vec3 b,
+             glm::vec3 c, glm::vec3 d,
+             int tile)
 {
-    vertices.push_back({a, color});
-    vertices.push_back({b, color});
-    vertices.push_back({c, color});
+    // The atlas is 64x16: four 16x16 tiles in one row.
+    constexpr float atlasWidth = 64.0f;
+    constexpr float atlasHeight = 16.0f;
+    constexpr float tileSize = 16.0f;
 
-    vertices.push_back({a, color});
-    vertices.push_back({c, color});
-    vertices.push_back({d, color});
+    // Sample near the center of edge pixels to avoid bleeding.
+    float u0 = (tile * tileSize + 0.5f) / atlasWidth;
+    float u1 = ((tile + 1) * tileSize - 0.5f) / atlasWidth;
+    float v0 = 0.5f / atlasHeight;
+    float v1 = (tileSize - 0.5f) / atlasHeight;
+
+    glm::vec3 color(1.0f);
+
+    glm::vec2 uvA(u1, v1);
+    glm::vec2 uvB(u1, v0);
+    glm::vec2 uvC(u0, v0);
+    glm::vec2 uvD(u0, v1);
+
+    vertices.push_back({a, color, uvA});
+    vertices.push_back({b, color, uvB});
+    vertices.push_back({c, color, uvC});
+
+    vertices.push_back({a, color, uvA});
+    vertices.push_back({c, color, uvC});
+    vertices.push_back({d, color, uvD});
 }
 
 std::vector<Vertex> buildWorld()
 {
     std::vector<Vertex> vertices;
-
-    const glm::vec3 grass(0.15f, 0.72f, 0.16f);
-    const glm::vec3 dirt(0.48f, 0.30f, 0.17f);
-    const glm::vec3 stone(0.48f, 0.49f, 0.51f);
 
     for (int x = 0; x < WORLD_X; ++x)
     {
@@ -157,9 +189,8 @@ std::vector<Vertex> buildWorld()
             for (int y = 0; y < h; ++y)
             {
                 glm::vec3 p(x, y, z);
-                glm::vec3 topColor = (y == h - 1) ? grass : dirt;
 
-                // Top: only the highest block in this column has an exposed top.
+                // Top face: grass-top (tile 3).
                 if (y == h - 1)
                 {
                     addFace(vertices,
@@ -167,10 +198,10 @@ std::vector<Vertex> buildWorld()
                             p + glm::vec3(0, 1, 1),
                             p + glm::vec3(1, 1, 1),
                             p + glm::vec3(1, 1, 0),
-                            topColor);
+                            3);
                 }
 
-                // Bottom: only the bottom layer touches the outside world.
+                // Bottom face: dirt (tile 1).
                 if (y == 0)
                 {
                     addFace(vertices,
@@ -178,10 +209,14 @@ std::vector<Vertex> buildWorld()
                             p + glm::vec3(1, 0, 0),
                             p + glm::vec3(1, 0, 1),
                             p + glm::vec3(0, 0, 1),
-                            dirt);
+                            1);
                 }
 
-                // +X: draw only if the neighboring column doesn't cover this block.
+                // Underground sides use stone (tile 0).
+                // The top block's sides use grass-side (tile 2).
+                int sideTile = (y == h - 1) ? 2 : 0;
+
+                // +X face.
                 if (x == WORLD_X - 1 || heights[x + 1][z] <= y)
                 {
                     addFace(vertices,
@@ -189,32 +224,32 @@ std::vector<Vertex> buildWorld()
                             p + glm::vec3(1, 1, 0),
                             p + glm::vec3(1, 1, 1),
                             p + glm::vec3(1, 0, 1),
-                            stone);
+                            sideTile);
                 }
 
-                // -X
+                // -X face.
                 if (x == 0 || heights[x - 1][z] <= y)
                 {
                     addFace(vertices,
                             p + glm::vec3(0, 0, 0),
-                            p + glm::vec3(0, 0, 1),
-                            p + glm::vec3(0, 1, 1),
                             p + glm::vec3(0, 1, 0),
-                            stone);
+                            p + glm::vec3(0, 1, 1),
+                            p + glm::vec3(0, 0, 1),
+                            sideTile);
                 }
 
-                // +Z
+                // +Z face.
                 if (z == WORLD_Z - 1 || heights[x][z + 1] <= y)
                 {
                     addFace(vertices,
                             p + glm::vec3(0, 0, 1),
-                            p + glm::vec3(1, 0, 1),
-                            p + glm::vec3(1, 1, 1),
                             p + glm::vec3(0, 1, 1),
-                            stone);
+                            p + glm::vec3(1, 1, 1),
+                            p + glm::vec3(1, 0, 1),
+                            sideTile);
                 }
 
-                // -Z
+                // -Z face.
                 if (z == 0 || heights[x][z - 1] <= y)
                 {
                     addFace(vertices,
@@ -222,7 +257,7 @@ std::vector<Vertex> buildWorld()
                             p + glm::vec3(0, 1, 0),
                             p + glm::vec3(1, 1, 0),
                             p + glm::vec3(1, 0, 0),
-                            stone);
+                            sideTile);
                 }
             }
         }
@@ -304,8 +339,8 @@ void addTargetOutline(std::vector<Vertex> &vertices,
 
     for (const auto &edge : edges)
     {
-        vertices.push_back({p[edge[0]], color});
-        vertices.push_back({p[edge[1]], color});
+        vertices.push_back({p[edge[0]], color, glm::vec2(0.0f)});
+        vertices.push_back({p[edge[1]], color, glm::vec2(0.0f)});
     }
 }
 
@@ -343,14 +378,74 @@ int main()
         glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
     }
 
-    // Correct initialization for GLAD 2.
-    if (!gladLoadGL(reinterpret_cast<GLADloadfunc>(glfwGetProcAddress)))
+    // Initialize GLAD and report the actual context version.
+    int glMajor = glfwGetWindowAttrib(window, GLFW_CONTEXT_VERSION_MAJOR);
+    int glMinor = glfwGetWindowAttrib(window, GLFW_CONTEXT_VERSION_MINOR);
+
+    std::cerr << "Requested OpenGL context: "
+              << glMajor << "." << glMinor << '\n';
+
+    if (gladLoadGL(reinterpret_cast<GLADloadfunc>(glfwGetProcAddress)) == 0)
     {
-        std::cerr << "Failed to initialize GLAD\n";
+        std::cerr << "GLAD failed to load OpenGL functions.\n";
+
+        const char *description = nullptr;
+        int errorCode = glfwGetError(&description);
+        std::cerr << "GLFW error: " << errorCode
+                  << " " << (description ? description : "none") << '\n';
+
         glfwDestroyWindow(window);
         glfwTerminate();
         return -1;
     }
+
+    std::cout << "GLAD initialized successfully.\n";
+
+    glEnable(GL_DEPTH_TEST);
+
+    // Load the texture atlas.
+    unsigned int atlasTexture = 0;
+    glGenTextures(1, &atlasTexture);
+    glBindTexture(GL_TEXTURE_2D, atlasTexture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    int imageWidth = 0;
+    int imageHeight = 0;
+    int channels = 0;
+
+    unsigned char *image = stbi_load(
+        "assets/textureatlas.png",
+        &imageWidth,
+        &imageHeight,
+        &channels,
+        4);
+
+    if (!image)
+    {
+        std::cerr << "Failed to load assets/textureatlas.png: "
+                  << stbi_failure_reason() << '\n';
+        glDeleteTextures(1, &atlasTexture);
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return -1;
+    }
+
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGBA,
+        imageWidth,
+        imageHeight,
+        0,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        image);
+
+    stbi_image_free(image);
 
     glEnable(GL_DEPTH_TEST);
 
@@ -403,6 +498,11 @@ int main()
         reinterpret_cast<void *>(offsetof(Vertex, color)));
     glEnableVertexAttribArray(1);
 
+    glVertexAttribPointer(
+        2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+        reinterpret_cast<void *>(offsetof(Vertex, uv)));
+    glEnableVertexAttribArray(2);
+
     // Buffers for the block-selection outline.
     unsigned int outlineVAO = 0;
     unsigned int outlineVBO = 0;
@@ -426,10 +526,16 @@ int main()
         reinterpret_cast<void *>(offsetof(Vertex, color)));
     glEnableVertexAttribArray(1);
 
+    glVertexAttribPointer(
+        2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+        reinterpret_cast<void *>(offsetof(Vertex, uv)));
+    glEnableVertexAttribArray(2);
+
     // Restore the terrain VAO.
     glBindVertexArray(VAO);
 
     bool leftMouseWasDown = false;
+    bool rightMouseWasDown = false;
     while (!glfwWindowShouldClose(window))
     {
         float currentFrame = static_cast<float>(glfwGetTime());
@@ -477,7 +583,6 @@ int main()
 
         leftMouseWasDown = leftMouseDown;
 
-        bool rightMouseWasDown = false;
         bool rightMouseDown =
             glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
 
@@ -542,6 +647,16 @@ int main()
         glm::mat4 MVP = projection * view;
 
         glUseProgram(shaderProgram);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, atlasTexture);
+
+        glUniform1i(
+            glGetUniformLocation(shaderProgram, "textureAtlas"), 0);
+
+        glUniform1i(
+            glGetUniformLocation(shaderProgram, "useTexture"), GL_TRUE);
+
         GLint mvpLocation =
             glGetUniformLocation(shaderProgram, "MVP");
         glUniformMatrix4fv(
@@ -567,9 +682,15 @@ int main()
                 outlineVertices.data(),
                 GL_DYNAMIC_DRAW);
 
+            glUniform1i(
+                glGetUniformLocation(shaderProgram, "useTexture"), GL_FALSE);
+
             glLineWidth(2.0f);
             glDrawArrays(GL_LINES, 0,
                          static_cast<GLsizei>(outlineVertices.size()));
+
+            glUniform1i(
+                glGetUniformLocation(shaderProgram, "useTexture"), GL_TRUE);
 
             glBindVertexArray(VAO);
         }
@@ -597,6 +718,7 @@ int main()
     glDeleteBuffers(1, &VBO);
     glDeleteVertexArrays(1, &VAO);
     glDeleteProgram(shaderProgram);
+    glDeleteTextures(1, &atlasTexture);
 
     glfwDestroyWindow(window);
     glfwTerminate();
