@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>MinecraftCopy Launcher</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="launcher-shell">
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="brand" aria-label="MinecraftCopy Launcher">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span class="brand-name">MINECRAFT<span>COPY</span></span>
+      </div>
+      <nav class="navigation">
+        <button class="nav-item active" type="button" aria-current="page">
+          <span class="nav-icon play-icon" aria-hidden="true">▶</span><span>Play</span>
+        </button>
+        <button class="nav-item" type="button" disabled aria-disabled="true" title="Coming later">
+          <span class="nav-icon" aria-hidden="true">▤</span><span>Installations</span>
+        </button>
+        <button class="nav-item" type="button" disabled aria-disabled="true" title="Coming later">
+          <span class="nav-icon" aria-hidden="true">⚙</span><span>Settings</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer"><span class="status-dot"></span> WINDOWS EDITION</div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="breadcrumb"><span>GAMES</span><span class="slash">/</span><strong>MINECRAFTCOPY</strong></div>
+        <div class="profile"><span id="app-version">CHECKING…</span></div>
+      </header>
+
+      <section class="feature" aria-labelledby="game-title">
+        <div class="feature-copy">
+          <div class="eyebrow"><span class="eyebrow-line"></span> VOXEL SANDBOX</div>
+          <h1 id="game-title">MINECRAFT<span>COPY</span></h1>
+          <p class="description">Choose a world type and start exploring.</p>
+          <div class="version-line"><span class="version-dot"></span> GAME VERSION <span class="version-number" id="game-version">CHECKING…</span></div>
+
+          <fieldset class="world-picker">
+            <legend>WORLD TYPE</legend>
+            <div class="mode-options">
+              <label class="mode-option selected" data-mode="finite">
+                <input type="radio" name="world" value="finite" checked>
+                <span class="mode-symbol finite-symbol" aria-hidden="true">▦</span>
+                <span class="mode-label"><strong>Finite</strong><small>Bounded world</small></span>
+                <span class="radio-mark" aria-hidden="true"></span>
+              </label>
+              <label class="mode-option" data-mode="infinite">
+                <input type="radio" name="world" value="infinite">
+                <span class="mode-symbol infinite-symbol" aria-hidden="true">∞</span>
+                <span class="mode-label"><strong>Infinite</strong><small>Explore endlessly</small></span>
+                <span class="radio-mark" aria-hidden="true"></span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="play-row">
+            <button class="play-button" id="play-button" type="button" disabled><span aria-hidden="true">▶</span> CHECKING…</button>
+            <button class="update-button" id="update-button" type="button" disabled>CHECKING FOR UPDATES</button>
+          </div>
+          <p class="launch-status" id="launch-status" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="landscape" role="img" aria-label="A block landscape with green hills, trees, and a sunset">
+          <div class="sun"></div>
+          <div class="cloud cloud-one"></div><div class="cloud cloud-two"></div>
+          <div class="mountain mountain-back"></div><div class="mountain mountain-front"></div>
+          <div class="hill hill-back"></div><div class="hill hill-front"></div>
+          <div class="tree tree-one"><i></i><b></b></div>
+          <div class="tree tree-two"><i></i><b></b></div>
+          <div class="tree tree-three"><i></i><b></b></div>
+          <div class="pixel-ground"></div>
+          <div class="landscape-label"><span class="landscape-label-dot"></span> FINITE AND INFINITE WORLDS</div>
+        </div>
+      </section>
+
+      <section class="library" aria-labelledby="library-title">
+        <div class="library-heading">
+          <div><div class="eyebrow small-eyebrow">AVAILABLE NOW</div><h2 id="library-title">GAMES <span>01</span></h2></div>
+          <div class="carousel-controls" aria-label="Game carousel controls"><button type="button" disabled aria-label="Previous game">‹</button><button type="button" disabled aria-label="Next game">›</button></div>
+        </div>
+        <div class="game-track" role="list" aria-label="Games">
+          <article class="game-card selected-card" role="listitem" aria-current="true">
+            <div class="card-art" aria-hidden="true"><span class="card-sun"></span><span class="card-hill card-hill-back"></span><span class="card-hill card-hill-front"></span><span class="card-tree"></span></div>
+            <div class="card-info"><span class="card-logo">MINECRAFT<span>COPY</span></span><span class="card-title">WINDOWS</span><span class="card-state"><i></i> <span id="card-status">CHECKING</span></span></div>
+            <span class="selected-check" aria-label="Selected">✓</span>
+          </article>
+          <div class="library-note"><span class="note-rule"></span><span>INSTALLED VERSION<br><span id="library-version">CHECKING…</span></span></div>
+        </div>
+      </section>
+
+      <footer class="footer"><span>MINECRAFTCOPY <i>•</i> INDEPENDENT PROJECT</span><span>v<span id="footer-version">CHECKING…</span></span></footer>
+    </main>
+  </div>
+</body>
+</html>

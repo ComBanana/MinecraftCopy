@@ -2,6 +2,9 @@
 # CMake build output
 /build/
 
+# Internal design and implementation notes
+/docs/superpowers/
+
 # Visual Studio
 .vs/
 *.user
@@ -12,3 +15,6 @@
 *.dll
 *.lib
 *.pdb
+
+# Local brainstorming mockups
+.superpowers/

@@ -20,6 +20,7 @@
 #include "ChunkStreamer.h"
 #include "TerrainGenerator.h"
 #include "ChunkMesher.h"
+#include "BuildVersion.h"
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
@@ -361,6 +362,11 @@ int main(int argc, char* argv[])
     for (int argumentIndex = 1; argumentIndex < argc; ++argumentIndex)
     {
         const std::string argument = argv[argumentIndex];
+        if (argument == "--version")
+        {
+            std::cout << MINECRAFTCOPY_VERSION << '\n';
+            return 0;
+        }
         if (argument == "--world=infinite")
             infiniteWorld = true;
         else if (argument == "--world=finite")

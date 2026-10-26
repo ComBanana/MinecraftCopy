@@ -1,54 +1,37 @@
 # MinecraftCopy
 
-MinecraftCopy is a personal project where I'm trying to build a Minecraft-inspired game from scratch using C++ and OpenGL.
+A small voxel sandbox built in C++17 with OpenGL. The first release is `0.0.1-alpha`.
 
-I'm doing this mostly because I want to learn how games work behind the scenes and see if I can build something cool on my own. I'm figuring things out as I go, experimenting with graphics programming, and slowly turning a basic project into something more.
+## Features
 
-It's still a work in progress, and I'm just taking it one step at a time.
+- Finite and infinite worlds
+- Block placement and breaking
+- Keyboard and mouse controls
+- A Windows launcher with world-mode selection
 
-## About the Project
+## Build on Windows
 
-The idea is to create a small 3D voxel game inspired by Minecraft while learning more about game development along the way.
-
-I'm building things from the ground up instead of relying on a full game engine. It's a learning experience as much as it is a game project, so things will probably change quite a bit as I go.
-
-## Built With
-
-- C++
-- OpenGL
-- GLAD
-- CMake
-
-## Building on Windows
-
-You'll need CMake, Git, and Visual Studio Build Tools with the C++ build tools and Windows SDK installed.
-
-Clone the repository:
-
-```bash
-git clone https://github.com/ComBanana/MinecraftCopy.git
-cd MinecraftCopy
-```
-
-Configure the project:
-
-```bash
-cmake -S . -B build
-```
-
-Build it:
-
-```bash
-cmake --build build --config Release
-```
-
-Once the build finishes, run the generated executable from its output directory.
-
-Finite mode is the default. To start directly in infinite mode, run:
+Install CMake, Git, and Visual Studio Build Tools with the C++ workload and Windows SDK. Configuration downloads the pinned WebView2 SDK package, so the first configure needs network access.
 
 ```powershell
-.\MinecraftCopy.exe --world=infinite
+cmake -S . -B build "-DMINECRAFTCOPY_VERSION:STRING=0.0.1-alpha"
+cmake --build build --config Release --parallel 1
+ctest --test-dir build -C Release --output-on-failure
 ```
+
+Run `build/bin/Release/MinecraftCopyLauncher.exe`. The launcher requires the Microsoft Edge WebView2 Evergreen Runtime. To start the game directly, run `build/bin/Release/MinecraftCopy.exe`; pass `--world=infinite` for an infinite world or `--world=finite` for a finite world. `--version` prints the game build version.
+
+## Install and update
+
+Download `MinecraftCopyLauncher-windows-x64.zip` from the [GitHub Releases](https://github.com/ComBanana/MinecraftCopy/releases) page, extract the complete ZIP, and run `MinecraftCopyLauncher.exe`. On first launch, install the game from the launcher. The launcher checks published GitHub releases, compares semantic versions, and downloads the Windows game files into your local application data folder. It verifies each file against the release manifest's SHA-256 hash before activating it. The repository must be public for downloads to work.
+
+The launcher updates the game. Updating the launcher itself requires downloading and replacing its ZIP package. To publish the first release, commit and push the source changes (including `.github/workflows/release.yml`), make the repository public, then push the tag `v0.0.1-alpha`. GitHub Actions builds the Windows x64 release, runs the test suite, creates the launcher ZIP and game manifest, and publishes the prerelease. You can create the same release files locally with:
+
+```powershell
+./scripts/package-release.ps1 -Version 0.0.1-alpha
+```
+
+This creates ignored release files under `build/release-assets/v0.0.1-alpha`.
 
 ## Controls
 
@@ -57,21 +40,13 @@ Finite mode is the default. To start directly in infinite mode, run:
 - `Space`: jump
 - Left mouse button: break a block
 - Right mouse button: place a grass block
-- `F5`: switch between finite and infinite worlds
+- `F5`: switch world modes
 - `Escape`: quit
 
-The finite world is 25 by 25 chunks. Infinite mode generates chunks around the player and removes distant chunks; terrain is deterministic for the configured seed.
-
-## Screenshots
-
-I'll add screenshots here as the project develops.
-
-## A Note
-
-This is just a personal project I'm working on in my free time. I'm learning as I go, so things might be a little rough around the edges.
-
-MinecraftCopy is an independent project inspired by Minecraft. It isn't affiliated with or endorsed by Mojang Studios or Microsoft.
+The finite world is 25 by 25 chunks. Infinite mode streams nearby chunks. Terrain is deterministic for the configured seed.
 
 ## License
 
-No license has been added yet, so the code isn't currently offered under a specific open-source license.
+MinecraftCopy is released under the MIT License. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+MinecraftCopy is an independent project and is not affiliated with or endorsed by Mojang Studios or Microsoft.

@@ -1,0 +1,63 @@
+name: Windows release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure release build
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          $pattern = '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$'
+          if ($version -cnotmatch $pattern) { throw "Invalid release tag: $env:GITHUB_REF_NAME" }
+          if ($Matches[4]) {
+            foreach ($identifier in $Matches[4].Split('.')) {
+              if ($identifier -cmatch '^[0-9]+$' -and $identifier.Length -gt 1 -and $identifier.StartsWith('0')) {
+                throw "Numeric prerelease identifiers cannot contain leading zeroes."
+              }
+            }
+          }
+          "MINECRAFTCOPY_VERSION=$version" >> $env:GITHUB_ENV
+          cmake -S . -B build -A x64 "-DMINECRAFTCOPY_VERSION:STRING=$version" -DMINECRAFTCOPY_DEVELOPMENT_BUILD:BOOL=OFF
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 1
+
+      - name: Run tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package release assets
+        shell: pwsh
+        run: ./scripts/package-release.ps1 -Version $env:MINECRAFTCOPY_VERSION
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = $env:MINECRAFTCOPY_VERSION
+          $releaseDirectory = "build/release-assets/v$version"
+          $assets = @(
+            "$releaseDirectory/MinecraftCopyLauncher-windows-x64.zip",
+            "$releaseDirectory/MinecraftCopy.exe",
+            "$releaseDirectory/textureatlas.png",
+            "$releaseDirectory/game-manifest-windows-x64.json"
+          )
+          $arguments = @("release", "create", $env:GITHUB_REF_NAME) + $assets + @(
+            "--title", "MinecraftCopy $version",
+            "--notes", "Windows x64 release. Download the launcher ZIP to install and update the game. The repository must be public for the launcher to download game releases."
+          )
+          if ($version.Contains('-')) { $arguments += "--prerelease" }
+          gh @arguments
