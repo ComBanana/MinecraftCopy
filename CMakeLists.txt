@@ -79,9 +79,38 @@ target_include_directories(MinecraftCopy PRIVATE
     ${stb_SOURCE_DIR}
 )
 
-file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
-     DESTINATION "${CMAKE_BINARY_DIR}")
+add_custom_command(TARGET MinecraftCopy POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+        "$<TARGET_FILE_DIR:MinecraftCopy>/assets"
+)
 
 if(MSVC)
     target_compile_options(MinecraftCopy PRIVATE /W4)
+endif()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(WorldTests tests/WorldTests.cpp)
+    target_include_directories(WorldTests PRIVATE src)
+    target_link_libraries(WorldTests PRIVATE glm::glm)
+    add_test(NAME WorldTests COMMAND WorldTests)
+
+    add_executable(PlayerTests
+        tests/PlayerTests.cpp
+        src/Player.cpp
+    )
+    target_include_directories(PlayerTests PRIVATE src)
+    target_link_libraries(PlayerTests PRIVATE
+        glfw
+        glad_gl_core_33
+        OpenGL::GL
+        glm::glm
+    )
+    add_test(NAME PlayerTests COMMAND PlayerTests)
+
+    add_executable(RaycastTests tests/RaycastTests.cpp)
+    target_include_directories(RaycastTests PRIVATE src)
+    target_link_libraries(RaycastTests PRIVATE glm::glm)
+    add_test(NAME RaycastTests COMMAND RaycastTests)
 endif()

@@ -5,14 +5,28 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
+#include "World.h"
+
+struct PlayerInput
+{
+    bool forward = false;
+    bool backward = false;
+    bool left = false;
+    bool right = false;
+    bool jump = false;
+};
+
 class Player {
 public:
     Player();
 
     void setPosition(const glm::vec3& newPosition);
+    void resetMouseTracking();
     void processMouseMovement(double xpos, double ypos);
     void processMovement(GLFWwindow* window, float deltaTime,
-                         const int heights[16][16]);
+                         const World& world);
+    void updateMovement(float deltaTime, const World& world,
+                        const PlayerInput& input);
 
     glm::vec3 getPosition() const;
     glm::vec3 getFront() const;
@@ -20,11 +34,9 @@ public:
 
 private:
     bool overlapsBlock(int x, int y, int z,
-                       const int heights[16][16]) const;
-    void moveHorizontal(float dx, float dz,
-                        const int heights[16][16]);
-    void updateVertical(float deltaTime,
-                        const int heights[16][16]);
+                       const World& world) const;
+    void moveHorizontal(float dx, float dz, const World& world);
+    void updateVertical(float deltaTime, const World& world);
 
     glm::vec3 position;
     glm::vec3 front;

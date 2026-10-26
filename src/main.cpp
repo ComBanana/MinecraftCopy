@@ -8,33 +8,78 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <iostream>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "Player.h"
+#include "BlockRaycaster.h"
+#include "ChunkStreamer.h"
+#include "TerrainGenerator.h"
+#include "ChunkMesher.h"
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
 
-const int WORLD_X = 16;
-const int WORLD_Z = 16;
-
-int heights[WORLD_X][WORLD_Z];
-
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 Player player;
+World world(WorldType::Limited);
+TerrainGenerator terrainGenerator;
+bool infiniteWorld = false;
+bool cursorLockRequested = true;
+bool windowFocused = false;
+bool suppressGameplayForResumeFrame = false;
+using Vertex = ChunkVertex;
 
-struct Vertex
+struct ChunkRenderMesh
 {
-    glm::vec3 pos;
-    glm::vec3 color;
-    glm::vec2 uv;
+    unsigned int vao = 0;
+    unsigned int vbo = 0;
+    GLsizei vertexCount = 0;
 };
+
+std::unordered_map<ChunkPos, ChunkRenderMesh, ChunkPosHash> chunkRenderMeshes;
+
+void setCursorLock(GLFWwindow *window, bool locked)
+{
+    cursorLockRequested = locked;
+
+    if (locked)
+    {
+        glfwFocusWindow(window);
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        if (glfwRawMouseMotionSupported())
+            glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+        glfwSetCursorPos(window, WIDTH * 0.5, HEIGHT * 0.5);
+        player.resetMouseTracking();
+        suppressGameplayForResumeFrame = true;
+    }
+    else
+    {
+        if (glfwRawMouseMotionSupported())
+            glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        player.resetMouseTracking();
+    }
+}
 
 void mouse_callback(GLFWwindow *, double xpos, double ypos)
 {
-    player.processMouseMovement(xpos, ypos);
+    if (cursorLockRequested && windowFocused)
+        player.processMouseMovement(xpos, ypos);
+}
+
+void key_callback(GLFWwindow *window, int key, int, int action, int)
+{
+    if ((key == GLFW_KEY_LEFT_ALT || key == GLFW_KEY_RIGHT_ALT) &&
+        action == GLFW_PRESS)
+    {
+        setCursorLock(window, !cursorLockRequested);
+    }
 }
 
 void framebuffer_callback(GLFWwindow *, int width, int height)
@@ -42,6 +87,20 @@ void framebuffer_callback(GLFWwindow *, int width, int height)
     if (height > 0 && width > 0)
     {
         glViewport(0, 0, width, height);
+    }
+}
+
+void focus_callback(GLFWwindow *window, int focused)
+{
+    windowFocused = focused == GLFW_TRUE;
+    if (windowFocused && cursorLockRequested)
+    {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        if (glfwRawMouseMotionSupported())
+            glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+        glfwSetCursorPos(window, WIDTH * 0.5, HEIGHT * 0.5);
+        player.resetMouseTracking();
+        suppressGameplayForResumeFrame = true;
     }
 }
 
@@ -144,178 +203,131 @@ unsigned int makeShaderProgram()
     return program;
 }
 
-void addFace(std::vector<Vertex> &vertices,
-             glm::vec3 a, glm::vec3 b,
-             glm::vec3 c, glm::vec3 d,
-             int tile)
+void updateChunkMesh(const ChunkPos& chunkPos)
 {
-    // The atlas is 64x16: four 16x16 tiles in one row.
-    constexpr float atlasWidth = 64.0f;
-    constexpr float atlasHeight = 16.0f;
-    constexpr float tileSize = 16.0f;
+    const auto existing = chunkRenderMeshes.find(chunkPos);
+    if (!world.getChunk(chunkPos))
+    {
+        if (existing != chunkRenderMeshes.end())
+        {
+            glDeleteVertexArrays(1, &existing->second.vao);
+            glDeleteBuffers(1, &existing->second.vbo);
+            chunkRenderMeshes.erase(existing);
+        }
+        return;
+    }
 
-    // Sample near the center of edge pixels to avoid bleeding.
-    float u0 = (tile * tileSize + 0.5f) / atlasWidth;
-    float u1 = ((tile + 1) * tileSize - 0.5f) / atlasWidth;
-    float v0 = 0.5f / atlasHeight;
-    float v1 = (tileSize - 0.5f) / atlasHeight;
+    const std::vector<Vertex> vertices = ChunkMesher::buildMesh(world, chunkPos);
+    ChunkRenderMesh& mesh = chunkRenderMeshes[chunkPos];
+    if (mesh.vao == 0)
+    {
+        glGenVertexArrays(1, &mesh.vao);
+        glGenBuffers(1, &mesh.vbo);
+        glBindVertexArray(mesh.vao);
+        glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+            reinterpret_cast<void*>(offsetof(Vertex, pos)));
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+            reinterpret_cast<void*>(offsetof(Vertex, color)));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+            reinterpret_cast<void*>(offsetof(Vertex, uv)));
+        glEnableVertexAttribArray(2);
+    }
+    else
+    {
+        glBindVertexArray(mesh.vao);
+        glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo);
+    }
 
-    glm::vec3 color(1.0f);
-
-    glm::vec2 uvA(u1, v1);
-    glm::vec2 uvB(u1, v0);
-    glm::vec2 uvC(u0, v0);
-    glm::vec2 uvD(u0, v1);
-
-    vertices.push_back({a, color, uvA});
-    vertices.push_back({b, color, uvB});
-    vertices.push_back({c, color, uvC});
-
-    vertices.push_back({a, color, uvA});
-    vertices.push_back({c, color, uvC});
-    vertices.push_back({d, color, uvD});
+    glBufferData(GL_ARRAY_BUFFER,
+        static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)),
+        vertices.data(), GL_DYNAMIC_DRAW);
+    mesh.vertexCount = static_cast<GLsizei>(vertices.size());
 }
 
-std::vector<Vertex> buildWorld()
+void syncChunkMeshes()
 {
-    std::vector<Vertex> vertices;
-
-    for (int x = 0; x < WORLD_X; ++x)
+    std::unordered_set<ChunkPos, ChunkPosHash> dirtyChunks;
+    for (auto it = chunkRenderMeshes.begin(); it != chunkRenderMeshes.end();)
     {
-        for (int z = 0; z < WORLD_Z; ++z)
+        if (!world.getChunk(it->first))
         {
-            int h = heights[x][z];
-
-            for (int y = 0; y < h; ++y)
-            {
-                glm::vec3 p(x, y, z);
-
-                // Top face: grass-top (tile 3).
-                if (y == h - 1)
-                {
-                    addFace(vertices,
-                            p + glm::vec3(0, 1, 0),
-                            p + glm::vec3(0, 1, 1),
-                            p + glm::vec3(1, 1, 1),
-                            p + glm::vec3(1, 1, 0),
-                            3);
-                }
-
-                // Bottom face: dirt (tile 1).
-                if (y == 0)
-                {
-                    addFace(vertices,
-                            p + glm::vec3(0, 0, 0),
-                            p + glm::vec3(1, 0, 0),
-                            p + glm::vec3(1, 0, 1),
-                            p + glm::vec3(0, 0, 1),
-                            1);
-                }
-
-                // Underground sides use stone (tile 0).
-                // The top block's sides use grass-side (tile 2).
-                int sideTile = (y == h - 1) ? 2 : 0;
-
-                // +X face.
-                if (x == WORLD_X - 1 || heights[x + 1][z] <= y)
-                {
-                    addFace(vertices,
-                            p + glm::vec3(1, 0, 0),
-                            p + glm::vec3(1, 1, 0),
-                            p + glm::vec3(1, 1, 1),
-                            p + glm::vec3(1, 0, 1),
-                            sideTile);
-                }
-
-                // -X face.
-                if (x == 0 || heights[x - 1][z] <= y)
-                {
-                    addFace(vertices,
-                            p + glm::vec3(0, 0, 0),
-                            p + glm::vec3(0, 1, 0),
-                            p + glm::vec3(0, 1, 1),
-                            p + glm::vec3(0, 0, 1),
-                            sideTile);
-                }
-
-                // +Z face.
-                if (z == WORLD_Z - 1 || heights[x][z + 1] <= y)
-                {
-                    addFace(vertices,
-                            p + glm::vec3(0, 0, 1),
-                            p + glm::vec3(0, 1, 1),
-                            p + glm::vec3(1, 1, 1),
-                            p + glm::vec3(1, 0, 1),
-                            sideTile);
-                }
-
-                // -Z face.
-                if (z == 0 || heights[x][z - 1] <= y)
-                {
-                    addFace(vertices,
-                            p + glm::vec3(0, 0, 0),
-                            p + glm::vec3(0, 1, 0),
-                            p + glm::vec3(1, 1, 0),
-                            p + glm::vec3(1, 0, 0),
-                            sideTile);
-                }
-            }
+            const ChunkPos removed = it->first;
+            dirtyChunks.insert({removed.x - 1, removed.z});
+            dirtyChunks.insert({removed.x + 1, removed.z});
+            dirtyChunks.insert({removed.x, removed.z - 1});
+            dirtyChunks.insert({removed.x, removed.z + 1});
+            glDeleteVertexArrays(1, &it->second.vao);
+            glDeleteBuffers(1, &it->second.vbo);
+            it = chunkRenderMeshes.erase(it);
+        }
+        else
+        {
+            ++it;
         }
     }
 
-    return vertices;
-}
-
-struct BlockTarget
-{
-    bool hit = false;
-    int x = 0;
-    int y = 0;
-    int z = 0;
-    glm::ivec3 previousBlock = glm::ivec3(0);
-};
-
-BlockTarget raycastBlocks(
-    const glm::vec3 &origin,
-    const glm::vec3 &direction,
-    const int heights[16][16])
-{
-    constexpr float MAX_REACH = 5.0f;
-    constexpr float STEP = 0.02f;
-
-    BlockTarget result;
-    glm::ivec3 previous(
-        static_cast<int>(std::floor(origin.x)),
-        static_cast<int>(std::floor(origin.y)),
-        static_cast<int>(std::floor(origin.z)));
-
-    for (float distance = 0.0f;
-         distance <= MAX_REACH;
-         distance += STEP)
+    for (const auto& entry : world.getChunks())
     {
-        glm::vec3 point = origin + direction * distance;
-
-        int x = static_cast<int>(std::floor(point.x));
-        int y = static_cast<int>(std::floor(point.y));
-        int z = static_cast<int>(std::floor(point.z));
-
-        if (x < 0 || x >= 16 || z < 0 || z >= 16)
-            continue;
-
-        if (y >= 0 && y < heights[x][z])
+        const ChunkPos pos = entry.first;
+        if (chunkRenderMeshes.find(pos) == chunkRenderMeshes.end())
         {
-            result.hit = true;
-            result.x = x;
-            result.y = y;
-            result.z = z;
-            result.previousBlock = previous;
-            return result;
+            dirtyChunks.insert(pos);
+            dirtyChunks.insert({pos.x - 1, pos.z});
+            dirtyChunks.insert({pos.x + 1, pos.z});
+            dirtyChunks.insert({pos.x, pos.z - 1});
+            dirtyChunks.insert({pos.x, pos.z + 1});
         }
-
-        previous = glm::ivec3(x, y, z);
     }
 
-    return result;
+    for (const ChunkPos& pos : dirtyChunks)
+    {
+        if (world.getChunk(pos))
+            updateChunkMesh(pos);
+    }
+}
+
+void clearChunkMeshes()
+{
+    for (auto& entry : chunkRenderMeshes)
+    {
+        glDeleteVertexArrays(1, &entry.second.vao);
+        glDeleteBuffers(1, &entry.second.vbo);
+    }
+    chunkRenderMeshes.clear();
+}
+
+void updateBlockMeshes(const BlockPos& pos)
+{
+    const ChunkAddress address = WorldCoordinates::toChunkAddress(pos);
+    std::unordered_set<ChunkPos, ChunkPosHash> dirtyChunks;
+    dirtyChunks.insert(address.chunk);
+    if (address.local.x == 0)
+        dirtyChunks.insert({address.chunk.x - 1, address.chunk.z});
+    if (address.local.x == WorldConfig::CHUNK_SIZE - 1)
+        dirtyChunks.insert({address.chunk.x + 1, address.chunk.z});
+    if (address.local.z == 0)
+        dirtyChunks.insert({address.chunk.x, address.chunk.z - 1});
+    if (address.local.z == WorldConfig::CHUNK_SIZE - 1)
+        dirtyChunks.insert({address.chunk.x, address.chunk.z + 1});
+
+    for (const ChunkPos& chunkPos : dirtyChunks)
+    {
+        if (world.getChunk(chunkPos))
+            updateChunkMesh(chunkPos);
+    }
+}
+
+int surfaceHeight(int x, int z)
+{
+    for (int y = WorldConfig::WORLD_HEIGHT - 1; y >= 0; --y)
+    {
+        if (world.getBlock({x, y, z}) != BlockId::Air)
+            return y + 1;
+    }
+    return 1;
 }
 
 void addTargetOutline(std::vector<Vertex> &vertices,
@@ -344,8 +356,19 @@ void addTargetOutline(std::vector<Vertex> &vertices,
     }
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+    for (int argumentIndex = 1; argumentIndex < argc; ++argumentIndex)
+    {
+        const std::string argument = argv[argumentIndex];
+        if (argument == "--world=infinite")
+            infiniteWorld = true;
+        else if (argument == "--world=finite")
+            infiniteWorld = false;
+    }
+
+    world = World(infiniteWorld ? WorldType::Infinite : WorldType::Limited);
+
     if (!glfwInit())
     {
         std::cerr << "Failed to initialize GLFW\n";
@@ -357,7 +380,9 @@ int main()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow *window = glfwCreateWindow(
-        WIDTH, HEIGHT, "MinecraftCopy", nullptr, nullptr);
+        WIDTH, HEIGHT,
+        infiniteWorld ? "MinecraftCopy - Infinite World" : "MinecraftCopy - Finite World",
+        nullptr, nullptr);
 
     if (!window)
     {
@@ -370,13 +395,13 @@ int main()
     glfwSwapInterval(1);
 
     glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetKeyCallback(window, key_callback);
     glfwSetFramebufferSizeCallback(window, framebuffer_callback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-    if (glfwRawMouseMotionSupported())
-    {
-        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-    }
+    glfwSetWindowFocusCallback(window, focus_callback);
+    glfwFocusWindow(window);
+    windowFocused = glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE;
+    setCursorLock(window, true);
+    glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
 
     // Initialize GLAD and report the actual context version.
     int glMajor = glfwGetWindowAttrib(window, GLFW_CONTEXT_VERSION_MAJOR);
@@ -417,8 +442,18 @@ int main()
     int imageHeight = 0;
     int channels = 0;
 
+    std::filesystem::path assetPath = "assets/textureatlas.png";
+    if (argc > 0)
+    {
+        const std::filesystem::path executableAssetPath =
+            std::filesystem::path(argv[0]).parent_path() / "assets" / "textureatlas.png";
+        if (std::filesystem::exists(executableAssetPath))
+            assetPath = executableAssetPath;
+    }
+
+    const std::string assetPathString = assetPath.string();
     unsigned char *image = stbi_load(
-        "assets/textureatlas.png",
+        assetPathString.c_str(),
         &imageWidth,
         &imageHeight,
         &channels,
@@ -426,7 +461,7 @@ int main()
 
     if (!image)
     {
-        std::cerr << "Failed to load assets/textureatlas.png: "
+        std::cerr << "Failed to load " << assetPathString << ": "
                   << stbi_failure_reason() << '\n';
         glDeleteTextures(1, &atlasTexture);
         glfwDestroyWindow(window);
@@ -449,22 +484,27 @@ int main()
 
     glEnable(GL_DEPTH_TEST);
 
-    // Generate the initial terrain only once.
-    for (int x = 0; x < WORLD_X; ++x)
+    const ChunkPos initialCenter{12, 12};
+    const int spawnX = infiniteWorld
+        ? 0
+        : initialCenter.x * WorldConfig::CHUNK_SIZE + 8;
+    const int spawnZ = infiniteWorld
+        ? 0
+        : initialCenter.z * WorldConfig::CHUNK_SIZE + 8;
+    if (infiniteWorld)
     {
-        for (int z = 0; z < WORLD_Z; ++z)
-        {
-            heights[x][z] = 1 + (x + z) % 3;
-        }
+        ChunkStreamer::update(world, terrainGenerator, spawnX, spawnZ, 4);
     }
-
-    std::vector<Vertex> vertices = buildWorld();
-
-    // Spawn above the ground at the center of the world.
+    else
+    {
+        for (int x = 0; x < WorldConfig::LIMITED_CHUNKS_X; ++x)
+            for (int z = 0; z < WorldConfig::LIMITED_CHUNKS_Z; ++z)
+                terrainGenerator.generateChunk(world, {x, z});
+    }
     player.setPosition(glm::vec3(
-        8.5f,
-        static_cast<float>(heights[8][8]) + 1.8f,
-        8.5f));
+        spawnX + 0.5f,
+        static_cast<float>(surfaceHeight(spawnX, spawnZ)) + 1.8f,
+        spawnZ + 0.5f));
 
     unsigned int shaderProgram = makeShaderProgram();
     if (!shaderProgram)
@@ -474,34 +514,7 @@ int main()
         return -1;
     }
 
-    unsigned int VAO = 0;
-    unsigned int VBO = 0;
-
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(
-        GL_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)),
-        vertices.data(),
-        GL_STATIC_DRAW);
-
-    glVertexAttribPointer(
-        0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-        reinterpret_cast<void *>(offsetof(Vertex, pos)));
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(
-        1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-        reinterpret_cast<void *>(offsetof(Vertex, color)));
-    glEnableVertexAttribArray(1);
-
-    glVertexAttribPointer(
-        2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-        reinterpret_cast<void *>(offsetof(Vertex, uv)));
-    glEnableVertexAttribArray(2);
+    syncChunkMeshes();
 
     // Buffers for the block-selection outline.
     unsigned int outlineVAO = 0;
@@ -531,11 +544,11 @@ int main()
         reinterpret_cast<void *>(offsetof(Vertex, uv)));
     glEnableVertexAttribArray(2);
 
-    // Restore the terrain VAO.
-    glBindVertexArray(VAO);
+    glBindVertexArray(0);
 
     bool leftMouseWasDown = false;
     bool rightMouseWasDown = false;
+    bool modeKeyWasDown = false;
     while (!glfwWindowShouldClose(window))
     {
         float currentFrame = static_cast<float>(glfwGetTime());
@@ -544,81 +557,113 @@ int main()
 
         glfwPollEvents();
 
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        windowFocused = glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE;
+        const bool gameplayActive = cursorLockRequested && windowFocused &&
+                                    !suppressGameplayForResumeFrame;
+        const bool modeKeyDown =
+            glfwGetKey(window, GLFW_KEY_F5) == GLFW_PRESS;
+        BlockTarget target;
+
+        if (gameplayActive)
         {
-            glfwSetWindowShouldClose(window, true);
-        }
+            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+                glfwSetWindowShouldClose(window, true);
 
-        player.processMovement(window, deltaTime, heights);
-
-        BlockTarget target = raycastBlocks(
-            player.getPosition(),
-            player.getFront(),
-            heights);
-
-        // Break the targeted top block on a fresh left-click.
-        bool leftMouseDown =
-            glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-
-        if (leftMouseDown && !leftMouseWasDown && target.hit)
-        {
-            if (target.y == heights[target.x][target.z] - 1)
+            if (modeKeyDown && !modeKeyWasDown)
             {
-                heights[target.x][target.z]--;
-
-                // Rebuild the terrain mesh after removing the block.
-                vertices = buildWorld();
-
-                glBindBuffer(GL_ARRAY_BUFFER, VBO);
-                glBufferData(
-                    GL_ARRAY_BUFFER,
-                    static_cast<GLsizeiptr>(
-                        vertices.size() * sizeof(Vertex)),
-                    vertices.data(),
-                    GL_DYNAMIC_DRAW);
-
-                glBindVertexArray(VAO);
-            }
-        }
-
-        leftMouseWasDown = leftMouseDown;
-
-        bool rightMouseDown =
-            glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-
-        if (rightMouseDown && !rightMouseWasDown && target.hit)
-        {
-            glm::ivec3 place = target.previousBlock;
-
-            if (place.x >= 0 && place.x < WORLD_X &&
-                place.z >= 0 && place.z < WORLD_Z &&
-                place.y >= 0 &&
-                place.y == heights[place.x][place.z])
-            {
-                glm::vec3 p = player.getPosition();
-
-                bool overlaps =
-                    p.x + 0.3f > place.x && p.x - 0.3f < place.x + 1 &&
-                    p.y > place.y && p.y - 1.8f < place.y + 1 &&
-                    p.z + 0.3f > place.z && p.z - 0.3f < place.z + 1;
-
-                if (!overlaps)
+                infiniteWorld = !infiniteWorld;
+                glfwSetWindowTitle(window, infiniteWorld
+                    ? "MinecraftCopy - Infinite World"
+                    : "MinecraftCopy - Finite World");
+                clearChunkMeshes();
+                world.clear();
+                world = World(infiniteWorld ? WorldType::Infinite : WorldType::Limited);
+                if (infiniteWorld)
                 {
-                    heights[place.x][place.z]++;
-                    vertices = buildWorld();
+                    ChunkStreamer::update(
+                        world, terrainGenerator,
+                        static_cast<int>(std::floor(player.getPosition().x)),
+                        static_cast<int>(std::floor(player.getPosition().z)), 4);
+                }
+                else
+                {
+                    for (int x = 0; x < WorldConfig::LIMITED_CHUNKS_X; ++x)
+                        for (int z = 0; z < WorldConfig::LIMITED_CHUNKS_Z; ++z)
+                            terrainGenerator.generateChunk(world, {x, z});
+                }
+                const int px = infiniteWorld
+                    ? static_cast<int>(std::floor(player.getPosition().x))
+                    : initialCenter.x * WorldConfig::CHUNK_SIZE + 8;
+                const int pz = infiniteWorld
+                    ? static_cast<int>(std::floor(player.getPosition().z))
+                    : initialCenter.z * WorldConfig::CHUNK_SIZE + 8;
+                player.setPosition(glm::vec3(
+                    px + 0.5f, surfaceHeight(px, pz) + 1.8f, pz + 0.5f));
+                syncChunkMeshes();
+            }
 
-                    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-                    glBufferData(
-                        GL_ARRAY_BUFFER,
-                        static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex)),
-                        vertices.data(),
-                        GL_DYNAMIC_DRAW);
-                    glBindVertexArray(VAO);
+            if (infiniteWorld && ChunkStreamer::update(
+                    world, terrainGenerator,
+                    static_cast<int>(std::floor(player.getPosition().x)),
+                    static_cast<int>(std::floor(player.getPosition().z)), 4))
+            {
+                syncChunkMeshes();
+            }
+
+            player.processMovement(window, deltaTime, world);
+            target = raycastBlocks(
+                world, player.getPosition(), player.getFront());
+
+            const bool leftMouseDown = glfwGetMouseButton(
+                window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+            if (leftMouseDown && !leftMouseWasDown && target.hit)
+            {
+                if (world.setBlock(
+                        {target.x, target.y, target.z}, BlockId::Air))
+                {
+                    updateBlockMeshes({target.x, target.y, target.z});
                 }
             }
+            leftMouseWasDown = leftMouseDown;
+
+            const bool rightMouseDown = glfwGetMouseButton(
+                window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+            if (rightMouseDown && !rightMouseWasDown && target.hit)
+            {
+                const glm::ivec3 place = target.previousBlock;
+                if (place.y >= 0 && place.y < WorldConfig::WORLD_HEIGHT &&
+                    world.isInsideWorld(place.x, place.z) &&
+                    world.getBlock({place.x, place.y, place.z}) == BlockId::Air)
+                {
+                    const glm::vec3 p = player.getPosition();
+                    const bool overlaps =
+                        p.x + 0.3f > place.x && p.x - 0.3f < place.x + 1 &&
+                        p.y > place.y && p.y - 1.8f < place.y + 1 &&
+                        p.z + 0.3f > place.z && p.z - 0.3f < place.z + 1;
+
+                    if (!overlaps)
+                    {
+                        world.setBlock(
+                            {place.x, place.y, place.z}, BlockId::Grass);
+                        updateBlockMeshes({place.x, place.y, place.z});
+                    }
+                }
+            }
+            rightMouseWasDown = rightMouseDown;
+        }
+        else
+        {
+            // Consume polled input while paused so held keys and clicks do not
+            // trigger immediately after the cursor is locked again.
+            modeKeyWasDown = modeKeyDown;
+            leftMouseWasDown = glfwGetMouseButton(
+                window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+            rightMouseWasDown = glfwGetMouseButton(
+                window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+            suppressGameplayForResumeFrame = false;
         }
 
-        rightMouseWasDown = rightMouseDown;
+        modeKeyWasDown = modeKeyDown;
 
         // Camera and projection.
         int fbw, fbh;
@@ -662,9 +707,13 @@ int main()
         glUniformMatrix4fv(
             mvpLocation, 1, GL_FALSE, &MVP[0][0]);
 
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0,
-                     static_cast<GLsizei>(vertices.size()));
+        for (const auto& entry : chunkRenderMeshes)
+        {
+            if (entry.second.vertexCount == 0)
+                continue;
+            glBindVertexArray(entry.second.vao);
+            glDrawArrays(GL_TRIANGLES, 0, entry.second.vertexCount);
+        }
 
         if (target.hit)
         {
@@ -692,7 +741,7 @@ int main()
             glUniform1i(
                 glGetUniformLocation(shaderProgram, "useTexture"), GL_TRUE);
 
-            glBindVertexArray(VAO);
+            glBindVertexArray(0);
         }
 
         // Draw a white crosshair in the center of the screen.
@@ -715,8 +764,7 @@ int main()
         glfwSwapBuffers(window);
     }
 
-    glDeleteBuffers(1, &VBO);
-    glDeleteVertexArrays(1, &VAO);
+    clearChunkMeshes();
     glDeleteProgram(shaderProgram);
     glDeleteTextures(1, &atlasTexture);
 

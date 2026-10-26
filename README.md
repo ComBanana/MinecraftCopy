@@ -44,6 +44,24 @@ cmake --build build --config Release
 
 Once the build finishes, run the generated executable from its output directory.
 
+Finite mode is the default. To start directly in infinite mode, run:
+
+```powershell
+.\MinecraftCopy.exe --world=infinite
+```
+
+## Controls
+
+- `W`, `A`, `S`, `D`: move
+- Mouse: look around
+- `Space`: jump
+- Left mouse button: break a block
+- Right mouse button: place a grass block
+- `F5`: switch between finite and infinite worlds
+- `Escape`: quit
+
+The finite world is 25 by 25 chunks. Infinite mode generates chunks around the player and removes distant chunks; terrain is deterministic for the configured seed.
+
 ## Screenshots
 
 I'll add screenshots here as the project develops.

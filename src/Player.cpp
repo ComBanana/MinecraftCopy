@@ -7,9 +7,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace {
-    constexpr int WORLD_X = 16;
-    constexpr int WORLD_Z = 16;
-
     constexpr float PLAYER_HEIGHT = 1.8f;
     constexpr float PLAYER_RADIUS = 0.3f;
     constexpr float MOVE_SPEED = 5.0f;
@@ -37,6 +34,10 @@ void Player::setPosition(const glm::vec3& newPosition) {
     onGround = false;
 }
 
+void Player::resetMouseTracking() {
+    firstMouse = true;
+}
+
 void Player::processMouseMovement(double xpos, double ypos) {
     if (firstMouse) {
         lastX = static_cast<float>(xpos);
@@ -44,10 +45,10 @@ void Player::processMouseMovement(double xpos, double ypos) {
         firstMouse = false;
     }
 
-    float xOffset = (static_cast<float>(xpos) - lastX)
-                    * MOUSE_SENSITIVITY;
-    float yOffset = (lastY - static_cast<float>(ypos))
-                    * MOUSE_SENSITIVITY;
+    const float xOffset = (static_cast<float>(xpos) - lastX)
+                          * MOUSE_SENSITIVITY;
+    const float yOffset = (lastY - static_cast<float>(ypos))
+                          * MOUSE_SENSITIVITY;
 
     lastX = static_cast<float>(xpos);
     lastY = static_cast<float>(ypos);
@@ -66,11 +67,9 @@ void Player::processMouseMovement(double xpos, double ypos) {
 }
 
 bool Player::overlapsBlock(
-    int x, int y, int z, const int heights[16][16]) const {
+    int x, int y, int z, const World& world) const {
 
-    if (x < 0 || x >= WORLD_X || z < 0 || z >= WORLD_Z)
-        return false;
-    if (y < 0 || y >= heights[x][z])
+    if (world.getBlock({x, y, z}) == BlockId::Air)
         return false;
 
     float minX = position.x - PLAYER_RADIUS;
@@ -87,17 +86,31 @@ bool Player::overlapsBlock(
 
 
 void Player::moveHorizontal(
-    float dx, float dz, const int heights[16][16]) {
+    float dx, float dz, const World& world) {
 
     // Resolve X movement first, stopping at the nearest block.
     const float oldX = position.x;
     position.x += dx;
+    if (world.getType() == WorldType::Limited)
+    {
+        position.x = std::clamp(
+            position.x,
+            PLAYER_RADIUS,
+            static_cast<float>(WorldConfig::LIMITED_BLOCKS_X) - PLAYER_RADIUS);
+    }
     float resolvedX = position.x;
 
-    for (int x = 0; x < WORLD_X; ++x) {
-        for (int z = 0; z < WORLD_Z; ++z) {
-            for (int y = 0; y < heights[x][z]; ++y) {
-                if (!overlapsBlock(x, y, z, heights))
+    {
+        const int minX = static_cast<int>(std::floor(position.x - PLAYER_RADIUS));
+        const int maxX = static_cast<int>(std::floor(position.x + PLAYER_RADIUS));
+        const int minY = static_cast<int>(std::floor(position.y - PLAYER_HEIGHT));
+        const int maxY = static_cast<int>(std::floor(position.y));
+        const int minZ = static_cast<int>(std::floor(position.z - PLAYER_RADIUS));
+        const int maxZ = static_cast<int>(std::floor(position.z + PLAYER_RADIUS));
+        for (int x = minX; x <= maxX; ++x) {
+            for (int z = minZ; z <= maxZ; ++z) {
+                for (int y = minY; y <= maxY; ++y) {
+                if (!overlapsBlock(x, y, z, world))
                     continue;
 
                 if (dx > 0.0f)
@@ -106,6 +119,7 @@ void Player::moveHorizontal(
                 else if (dx < 0.0f)
                     resolvedX = std::max(
                         resolvedX, x + 1.0f + PLAYER_RADIUS);
+                }
             }
         }
     }
@@ -115,12 +129,26 @@ void Player::moveHorizontal(
     // Resolve Z movement using the corrected X position.
     const float oldZ = position.z;
     position.z += dz;
+    if (world.getType() == WorldType::Limited)
+    {
+        position.z = std::clamp(
+            position.z,
+            PLAYER_RADIUS,
+            static_cast<float>(WorldConfig::LIMITED_BLOCKS_Z) - PLAYER_RADIUS);
+    }
     float resolvedZ = position.z;
 
-    for (int x = 0; x < WORLD_X; ++x) {
-        for (int z = 0; z < WORLD_Z; ++z) {
-            for (int y = 0; y < heights[x][z]; ++y) {
-                if (!overlapsBlock(x, y, z, heights))
+    {
+        const int minX = static_cast<int>(std::floor(position.x - PLAYER_RADIUS));
+        const int maxX = static_cast<int>(std::floor(position.x + PLAYER_RADIUS));
+        const int minY = static_cast<int>(std::floor(position.y - PLAYER_HEIGHT));
+        const int maxY = static_cast<int>(std::floor(position.y));
+        const int minZ = static_cast<int>(std::floor(position.z - PLAYER_RADIUS));
+        const int maxZ = static_cast<int>(std::floor(position.z + PLAYER_RADIUS));
+        for (int x = minX; x <= maxX; ++x) {
+            for (int z = minZ; z <= maxZ; ++z) {
+                for (int y = minY; y <= maxY; ++y) {
+                if (!overlapsBlock(x, y, z, world))
                     continue;
 
                 if (dz > 0.0f)
@@ -129,6 +157,7 @@ void Player::moveHorizontal(
                 else if (dz < 0.0f)
                     resolvedZ = std::max(
                         resolvedZ, z + 1.0f + PLAYER_RADIUS);
+                }
             }
         }
     }
@@ -138,7 +167,7 @@ void Player::moveHorizontal(
 
 
 void Player::updateVertical(
-    float dt, const int heights[16][16]) {
+    float dt, const World& world) {
 
     onGround = false;
 
@@ -148,10 +177,17 @@ void Player::updateVertical(
     verticalVelocity -= GRAVITY * dt;
     position.y += verticalVelocity * dt;
 
-    for (int x = 0; x < WORLD_X; ++x) {
-        for (int z = 0; z < WORLD_Z; ++z) {
-            for (int y = 0; y < heights[x][z]; ++y) {
-                if (!overlapsBlock(x, y, z, heights))
+    {
+        const int minX = static_cast<int>(std::floor(position.x - PLAYER_RADIUS));
+        const int maxX = static_cast<int>(std::floor(position.x + PLAYER_RADIUS));
+        const int minY = static_cast<int>(std::floor(position.y - PLAYER_HEIGHT));
+        const int maxY = static_cast<int>(std::floor(position.y));
+        const int minZ = static_cast<int>(std::floor(position.z - PLAYER_RADIUS));
+        const int maxZ = static_cast<int>(std::floor(position.z + PLAYER_RADIUS));
+        for (int x = minX; x <= maxX; ++x) {
+            for (int z = minZ; z <= maxZ; ++z) {
+                for (int y = minY; y <= maxY; ++y) {
+                if (!overlapsBlock(x, y, z, world))
                     continue;
 
                 float blockTop = static_cast<float>(y + 1);
@@ -167,6 +203,7 @@ void Player::updateVertical(
                     position.y = blockBottom;
                     verticalVelocity = 0.0f;
                 }
+                }
             }
         }
     }
@@ -175,10 +212,16 @@ void Player::updateVertical(
         float savedY = position.y;
         position.y -= 0.03f;
 
-        for (int x = 0; x < WORLD_X && !onGround; ++x) {
-            for (int z = 0; z < WORLD_Z && !onGround; ++z) {
-                for (int y = 0; y < heights[x][z]; ++y) {
-                    if (overlapsBlock(x, y, z, heights)) {
+        const int minX = static_cast<int>(std::floor(position.x - PLAYER_RADIUS));
+        const int maxX = static_cast<int>(std::floor(position.x + PLAYER_RADIUS));
+        const int minY = static_cast<int>(std::floor(position.y - PLAYER_HEIGHT));
+        const int maxY = static_cast<int>(std::floor(position.y));
+        const int minZ = static_cast<int>(std::floor(position.z - PLAYER_RADIUS));
+        const int maxZ = static_cast<int>(std::floor(position.z + PLAYER_RADIUS));
+        for (int x = minX; x <= maxX && !onGround; ++x) {
+            for (int z = minZ; z <= maxZ && !onGround; ++z) {
+                for (int y = minY; y <= maxY; ++y) {
+                    if (overlapsBlock(x, y, z, world)) {
                         position.y = static_cast<float>(y + 1)
                                      + PLAYER_HEIGHT;
                         verticalVelocity = 0.0f;
@@ -195,7 +238,19 @@ void Player::updateVertical(
 }
 
 void Player::processMovement(
-    GLFWwindow* window, float dt, const int heights[16][16]) {
+    GLFWwindow* window, float dt, const World& world) {
+
+    const PlayerInput input{
+        glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS,
+        glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS,
+        glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS,
+        glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS,
+        glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS};
+    updateMovement(dt, world, input);
+}
+
+void Player::updateMovement(
+    float dt, const World& world, const PlayerInput& input) {
 
     glm::vec3 forward(front.x, 0.0f, front.z);
 
@@ -205,31 +260,28 @@ void Player::processMovement(
     glm::vec3 right = glm::normalize(glm::cross(forward, up));
     glm::vec3 direction(0.0f);
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    if (input.forward)
         direction += forward;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    if (input.backward)
         direction -= forward;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    if (input.right)
         direction += right;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    if (input.left)
         direction -= right;
 
     if (glm::length(direction) > 0.001f) {
         direction = glm::normalize(direction);
         moveHorizontal(direction.x * MOVE_SPEED * dt,
-                       direction.z * MOVE_SPEED * dt, heights);
+                       direction.z * MOVE_SPEED * dt, world);
     }
 
-    bool spaceDown =
-        glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-
-    if (spaceDown && !spaceWasDown && onGround) {
+    if (input.jump && !spaceWasDown && onGround) {
         verticalVelocity = JUMP_SPEED;
         onGround = false;
     }
 
-    spaceWasDown = spaceDown;
-    updateVertical(dt, heights);
+    spaceWasDown = input.jump;
+    updateVertical(dt, world);
 }
 
 glm::vec3 Player::getPosition() const { return position; }
